@@ -49,7 +49,6 @@ export function createCompleteTaskTool<T extends StandardSchemaV1>({
       ];
       const result = await aiProvider.generateObject({
         messages: fullHistory,
-        prompt: "Generate a JSON object as defined in the schema.",
         schema: outputSchema,
       });
       return { output: result.object };

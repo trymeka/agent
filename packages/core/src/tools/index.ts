@@ -24,4 +24,10 @@ export interface Tool<T extends StandardSchemaV1, Output> {
 }
 
 export { createCompleteTaskTool } from "./complete-task";
-export { createComputerTool } from "./computer";
+export {
+  createComputerTool,
+  type ComputerProvider,
+  type ComputerAction,
+  type ComputerActionResult,
+} from "./computer";
+export { ToolCallError, ComputerProviderError } from "./errors";

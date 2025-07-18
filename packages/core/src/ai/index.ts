@@ -104,3 +104,4 @@ export interface AIProvider {
 }
 
 export { createAgent } from "./agent";
+export { AIProviderError, AgentOutOfStepsError } from "./errors";
