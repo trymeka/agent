@@ -1,6 +1,6 @@
 {
   "name": "@trymeka/computer-provider-scrapybara",
-  "version": "0.0.1",
+  "version": "0.0.5",
   "type": "module",
   "publishConfig": {
     "access": "public"
