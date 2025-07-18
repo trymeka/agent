@@ -10,11 +10,11 @@
   "keywords": ["trymeka"],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ElasticBottle/trymeka.git",
+    "url": "git+https://github.com/trymeka/agent.git",
     "directory": "packages/ai-provider-vercel"
   },
   "license": "MIT",
-  "homepage": "https://github.com/ElasticBottle/trymeka/tree/main/packages/ai-provider-vercel#readme",
+  "homepage": "https://github.com/trymeka/agent/tree/main/packages/ai-provider-vercel#readme",
   "files": ["dist", "!dist/**/*.map", "README.md"],
   "exports": {
     ".": {

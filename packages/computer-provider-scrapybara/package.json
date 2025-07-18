@@ -10,11 +10,11 @@
   "keywords": ["trymeka"],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ElasticBottle/trymeka.git",
+    "url": "git+https://github.com/trymeka/agent.git",
     "directory": "packages/computer-provider-scrapybara"
   },
   "license": "MIT",
-  "homepage": "https://github.com/ElasticBottle/trymeka/tree/main/packages/computer-provider-scrapybara#readme",
+  "homepage": "https://github.com/trymeka/agent/tree/main/packages/computer-provider-scrapybara#readme",
   "files": ["dist", "!dist/**/*.map", "README.md"],
   "exports": {
     ".": {
@@ -22,9 +22,6 @@
       "import": "./dist/index.js"
     }
   },
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -34,7 +31,9 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@trymeka/core": "workspace:*"
+    "@trymeka/core": "workspace:*",
+    "playwright-core": "^1.54.1",
+    "scrapybara": "^2.5.2"
   },
   "devDependencies": {
     "@trymeka/typescript": "workspace:*",

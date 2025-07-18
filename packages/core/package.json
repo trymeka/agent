@@ -10,11 +10,11 @@
   "keywords": ["trymeka"],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ElasticBottle/trymeka.git",
+    "url": "git+https://github.com/trymeka/agent.git",
     "directory": "packages/agent"
   },
   "license": "MIT",
-  "homepage": "https://github.com/ElasticBottle/trymeka/tree/main/packages/agent#readme",
+  "homepage": "https://github.com/trymeka/agent/tree/main/packages/agent#readme",
   "files": ["dist", "!dist/**/*.map", "README.md"],
   "exports": {
     ".": {
@@ -22,9 +22,6 @@
       "import": "./dist/index.js"
     }
   },
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
