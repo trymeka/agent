@@ -14,7 +14,7 @@ Meka Agent is a framework for building, running, and deploying autonomous Comput
 To get started with Meka, install the various providers
 
 ```bash
-npm install @trymeka/core @trymeka/ai-provider-vercel @ai-sdk/openai @trymeka/computer-provider-scrapybara
+npm install @trymeka/core @trymeka/ai-provider-vercel @ai-sdk/openai @trymeka/computer-provider-scrapybara playwright-core
 ```
 
 Grab API keys from OpenAI and scrapybara, the computer provider.
