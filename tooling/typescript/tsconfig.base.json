@@ -36,7 +36,8 @@
     "moduleResolution": "Bundler",
     "noEmit": true,
     "paths": {
-      "@trymeka/agent": ["./packages/core/src"],
+      "@trymeka/core": ["./packages/core/src"],
+      "@trymeka/core/*": ["./packages/core/src/*"],
       "@trymeka/computer-provider-scrapybara": [
         "./packages/computer-provider-scrapybara/src"
       ],

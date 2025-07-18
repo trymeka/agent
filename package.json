@@ -1,11 +1,12 @@
 {
   "name": "trymeka",
   "private": true,
-  "workspaces": ["apps/*", "packages/*", "tooling/*"],
+  "workspaces": ["examples", "packages/*", "tooling/*"],
   "scripts": {
     "clean": "git clean -xdf node_modules .turbo .sst",
     "clean:workspaces": "turbo clean",
     "new:package": "turbo gen package",
+    "examples": "pnpm dotenvx run -- pnpm tsx --conditions=typescript",
     "dev": "turbo run dev",
     "build": "turbo build",
     "changeset": "changeset",
@@ -21,10 +22,12 @@
     "@trymeka/typescript": "workspace:*",
     "@turbo/gen": "^2.5.4",
     "@types/node": "^24.0.14",
-    "ts-node": "^10.9.2",
-    "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.20.3",
     "turbo": "^2.5.4",
     "typescript": "^5.8.3"
   },
-  "packageManager": "pnpm@10.12.1"
+  "packageManager": "pnpm@10.12.1",
+  "dependencies": {
+    "@dotenvx/dotenvx": "^1.48.0"
+  }
 }

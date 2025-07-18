@@ -86,7 +86,7 @@ const shouldRetryScrapybara = (error: unknown): boolean => {
   return false;
 };
 
-export function createScrapybaraProvider(options: {
+export function createScrapybaraComputerProvider(options: {
   apiKey: string;
   uploadScreenshot?: (options: {
     screenshotBase64: string;

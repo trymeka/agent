@@ -1,7 +1,6 @@
 {
   "name": "@trymeka/core",
   "version": "0.0.1",
-  "private": true,
   "type": "module",
   "publishConfig": {
     "access": "public"
@@ -18,10 +17,17 @@
   "files": ["dist", "!dist/**/*.map", "README.md"],
   "exports": {
     ".": {
+      "typescript": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./ai/*": {
+      "typescript": "./src/ai/*.ts",
+      "types": "./dist/ai/*.d.ts",
+      "import": "./dist/ai/*.js"
+    },
     "./utils/*": {
+      "typescript": "./src/utils/*.ts",
       "types": "./dist/utils/*.d.ts",
       "import": "./dist/utils/*.js"
     }

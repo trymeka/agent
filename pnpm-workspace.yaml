@@ -1,5 +1,5 @@
 packages:
-  - apps/*
+  - examples
   - packages/*
   - tooling/*
 onlyBuiltDependencies:

@@ -1,0 +1,30 @@
+{
+  "name": "@trymeka/examples",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "clean": "git clean -xdf .turbo node_modules dist .cache",
+    "format": "pnpx @biomejs/biome@1.9.4 format . --write",
+    "lint": "pnpx @biomejs/biome@1.9.4 lint . --write",
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^1.2.12",
+    "@ai-sdk/openai": "^1.3.23",
+    "@trymeka/ai-provider-vercel": "workspace:*",
+    "@trymeka/computer-provider-scrapybara": "workspace:*",
+    "@trymeka/core": "workspace:*",
+    "zod": "^4.0.5"
+  },
+  "devDependencies": {
+    "@trymeka/typescript": "workspace:*",
+    "typescript": "^5.8.3"
+  }
+}

@@ -1,7 +1,5 @@
+// This is only used if we add things like IAC down the line
 {
-  "extends": "./tsconfig.root.json",
-  "compilerOptions": {
-    "baseUrl": "."
-  },
-  "include": ["example.ts", "packages"]
+  "extends": "@trymeka/typescript/tsconfig.base.json",
+  "exclude": ["examples", "packages", "dist"]
 }
