@@ -11,20 +11,19 @@ if (!process.env.SCRAPYBARA_API_KEY) {
 if (!process.env.ANTHROPIC_API_KEY) {
   throw new Error("ANTHROPIC_API_KEY is not set");
 }
-
-const anthropic = createAnthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+const aiProvider = createVercelAIProvider({
+  model: createAnthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY,
+  })("claude-4-sonnet-20250514"),
+});
+const computerProvider = createScrapybaraComputerProvider({
+  apiKey: process.env.SCRAPYBARA_API_KEY,
+  initialUrl: "https://www.google.com",
 });
 
 const agent = createAgent({
-  aiProvider: createVercelAIProvider({
-    model: anthropic("claude-4-sonnet-20250514"),
-  }),
-  computerProvider: createScrapybaraComputerProvider({
-    apiKey: process.env.SCRAPYBARA_API_KEY,
-    initialUrl: "https://www.google.com",
-    logger: console,
-  }),
+  aiProvider,
+  computerProvider,
   logger: console,
 });
 

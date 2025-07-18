@@ -11,19 +11,19 @@ if (!process.env.OPENAI_API_KEY) {
   throw new Error("OPENAI_API_KEY is not set");
 }
 
-const openai = createOpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+const aiProvider = createVercelAIProvider({
+  model: createOpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  })("o3"),
+});
+const computerProvider = createScrapybaraComputerProvider({
+  apiKey: process.env.SCRAPYBARA_API_KEY,
+  initialUrl: "https://www.guardiandentistry.com/our-network",
 });
 
 const agent = createAgent({
-  aiProvider: createVercelAIProvider({
-    model: openai("o3"),
-  }),
-  computerProvider: createScrapybaraComputerProvider({
-    apiKey: process.env.SCRAPYBARA_API_KEY,
-    initialUrl: "https://www.guardiandentistry.com/our-network",
-    logger: console,
-  }),
+  aiProvider,
+  computerProvider,
   logger: console,
 });
 
