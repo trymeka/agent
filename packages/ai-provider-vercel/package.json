@@ -31,7 +31,9 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@trymeka/core": "workspace:*"
+    "@standard-schema/spec": "^1.0.0",
+    "@trymeka/core": "workspace:*",
+    "ai": "^4.3.19"
   },
   "devDependencies": {
     "@trymeka/typescript": "workspace:*",
