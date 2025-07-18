@@ -13,7 +13,7 @@
     "format": "turbo run format --continue",
     "lint": "turbo run lint --continue",
     "typecheck": "turbo run typecheck --continue",
-    "postinstall": "pnpx sherif@latest -f"
+    "postinstall": "pnpx sherif@latest"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
