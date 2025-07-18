@@ -4,6 +4,7 @@ import {
   type ComputerProvider,
   ComputerProviderError,
 } from "@trymeka/core";
+import { type Logger, createNoOpLogger } from "@trymeka/core/utils/logger";
 import { retryWithExponentialBackoff } from "@trymeka/core/utils/retry";
 import { type Browser, type Page, chromium } from "playwright-core";
 import { type BrowserInstance, ScrapybaraClient } from "scrapybara";
@@ -95,7 +96,9 @@ export function createScrapybaraComputerProvider(options: {
   }) => Promise<{ url: string }>;
   screenSize?: { width: number; height: number };
   initialUrl?: string;
+  logger?: Logger;
 }): ComputerProvider {
+  const logger = options.logger ?? createNoOpLogger();
   const screenSize = options.screenSize ?? { width: 1600, height: 900 };
   const scrapybaraClient = new ScrapybaraClient({
     apiKey: () => process.env.SCRAPYBARA_API_KEY ?? "",
@@ -111,13 +114,13 @@ export function createScrapybaraComputerProvider(options: {
       : undefined,
 
     async start(sessionId: string) {
-      console.info("[ComputerProvider] Starting up scrapybara instance");
+      logger.info("[ComputerProvider] Starting up scrapybara instance");
       const instance = await scrapybaraClient.startBrowser({
         timeoutHours: 1,
         resolution: [screenSize.width, screenSize.height],
       });
 
-      console.info("[ComputerProvider] instance started", {
+      logger.info("[ComputerProvider] instance started", {
         sessionId,
       });
       const cdpUrl = (await instance.getCdpUrl()).cdpUrl;
@@ -128,9 +131,12 @@ export function createScrapybaraComputerProvider(options: {
         // The dialog will be handled by the agent
       });
       const streamUrl = (await instance.getStreamUrl()).streamUrl;
+      logger.info("[ComputerProvider] streamUrl", {
+        streamUrl,
+      });
       if (options.initialUrl) {
         await page.goto(options.initialUrl);
-        console.info(
+        logger.info(
           `[ComputerProvider] Successfully navigated to initial url ${options.initialUrl}`,
         );
       }
@@ -169,7 +175,7 @@ export function createScrapybaraComputerProvider(options: {
 
     async performAction(
       action: ComputerAction,
-      context: { sessionId: string; step: number },
+      context: { sessionId: string; step: number; reasoning?: string },
     ): Promise<ComputerActionResult> {
       const result = sessionMap.get(context.sessionId);
       if (!result) {
@@ -214,7 +220,9 @@ export function createScrapybaraComputerProvider(options: {
                 return {
                   type: "click",
                   actionPerformed: `Clicked (button: ${sbActualClickButton}) at position (${x}, ${y})`,
-                  reasoning: `Clicked (button: ${sbActualClickButton}) at position (${x}, ${y})`,
+                  reasoning:
+                    context.reasoning ??
+                    `Clicked (button: ${sbActualClickButton}) at position (${x}, ${y})`,
                   timestamp: new Date().toISOString(),
                 };
               }
@@ -232,7 +240,9 @@ export function createScrapybaraComputerProvider(options: {
               return {
                 type: "double_click",
                 actionPerformed: `Double-clicked at position (${x}, ${y})`,
-                reasoning: `Double-clicked at position (${x}, ${y})`,
+                reasoning:
+                  context.reasoning ??
+                  `Double-clicked at position (${x}, ${y})`,
                 timestamp: new Date().toISOString(),
               };
             }
@@ -257,7 +267,9 @@ export function createScrapybaraComputerProvider(options: {
               return {
                 type: "scroll",
                 actionPerformed: `Scrolled by (scrollX=${scrollX}, scrollY=${scrollY}) at mouse position (${x},${y})`,
-                reasoning: `Scrolled by (scrollX=${scrollX}, scrollY=${scrollY}) at mouse position (${x},${y})`,
+                reasoning:
+                  context.reasoning ??
+                  `Scrolled by (scrollX=${scrollX}, scrollY=${scrollY}) at mouse position (${x},${y})`,
                 timestamp: new Date().toISOString(),
               };
             }
@@ -275,7 +287,9 @@ export function createScrapybaraComputerProvider(options: {
               return {
                 type: "keypress",
                 actionPerformed: `Pressed keys (XK): ${mappedKeys.join("+")}`,
-                reasoning: `Pressed keys (XK): ${mappedKeys.join("+")}`,
+                reasoning:
+                  context.reasoning ??
+                  `Pressed keys (XK): ${mappedKeys.join("+")}`,
                 timestamp: new Date().toISOString(),
               };
             }
@@ -289,7 +303,7 @@ export function createScrapybaraComputerProvider(options: {
               return {
                 type: "type",
                 actionPerformed: `Typed text: ${text}`,
-                reasoning: `Typed text: ${text}`,
+                reasoning: context.reasoning ?? `Typed text: ${text}`,
                 timestamp: new Date().toISOString(),
               };
             }
@@ -302,7 +316,7 @@ export function createScrapybaraComputerProvider(options: {
               return {
                 type: "wait",
                 actionPerformed: "Waited for 2 seconds",
-                reasoning: "Waited for 2 seconds",
+                reasoning: context.reasoning ?? "Waited for 2 seconds",
                 timestamp: new Date().toISOString(),
               };
             }
@@ -324,9 +338,11 @@ export function createScrapybaraComputerProvider(options: {
                 actionPerformed: `Dragged mouse along path from (${dragPath[0]?.[0]},${dragPath[0]?.[1]}) to (${
                   dragPath[dragPath.length - 1]?.[0]
                 },${dragPath[dragPath.length - 1]?.[1]})`,
-                reasoning: `Dragged mouse along path from (${dragPath[0]?.[0]},${dragPath[0]?.[1]}) to (${
-                  dragPath[dragPath.length - 1]?.[0]
-                },${dragPath[dragPath.length - 1]?.[1]})`,
+                reasoning:
+                  context.reasoning ??
+                  `Dragged mouse along path from (${dragPath[0]?.[0]},${dragPath[0]?.[1]}) to (${
+                    dragPath[dragPath.length - 1]?.[0]
+                  },${dragPath[dragPath.length - 1]?.[1]})`,
                 timestamp: new Date().toISOString(),
               };
             }
@@ -340,14 +356,14 @@ export function createScrapybaraComputerProvider(options: {
               return {
                 type: "move",
                 actionPerformed: `Moved mouse to (${x}, ${y})`,
-                reasoning: `Moved mouse to (${x}, ${y})`,
+                reasoning: context.reasoning ?? `Moved mouse to (${x}, ${y})`,
                 timestamp: new Date().toISOString(),
               };
             }
           }
         },
         shouldRetryError: shouldRetryScrapybara,
-        logger: console,
+        logger: logger,
       });
     },
   };

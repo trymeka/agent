@@ -1,4 +1,4 @@
-import type { StandardSchemaV1 } from "@standard-schema/spec";
+import type { z } from "zod";
 import type { Tool } from "../tools";
 
 export interface TextContent {
@@ -66,8 +66,8 @@ export interface GenerateTextResult {
 /**
  * The result of a `generateObject` call.
  */
-export interface GenerateObjectResult<T extends StandardSchemaV1> {
-  object: StandardSchemaV1.InferOutput<T>;
+export interface GenerateObjectResult<T extends z.ZodSchema> {
+  object: z.infer<T>;
   usage?: {
     promptTokens: number;
     completionTokens: number;
@@ -90,13 +90,13 @@ export interface AIProvider {
     systemPrompt?: string;
     messages: AgentMessage[];
     // biome-ignore lint/suspicious/noExplicitAny: user defined
-    tools?: Record<string, Tool<StandardSchemaV1, any>>;
+    tools?: Record<string, Tool<z.ZodSchema, any>>;
   }): Promise<GenerateTextResult>;
 
   /**
    * Generates a structured object that conforms to a given schema.
    */
-  generateObject<T extends StandardSchemaV1>(options: {
+  generateObject<T extends z.ZodSchema>(options: {
     schema: T;
     systemPrompt?: string;
     messages?: AgentMessage[];

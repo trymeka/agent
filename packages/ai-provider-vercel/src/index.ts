@@ -1,17 +1,21 @@
-import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type {
   AIProvider,
   AgentMessage,
   GenerateObjectResult,
   GenerateTextResult,
+  Tool,
 } from "@trymeka/core";
+import { parseComputerToolArgs } from "@trymeka/core/tools/computer";
 import {
   type CoreMessage,
   type LanguageModel,
+  NoSuchToolError,
+  type Tool as VercelTool,
   generateObject,
   generateText,
-  jsonSchema,
+  tool as vercelTool,
 } from "ai";
+import type { z } from "zod";
 
 function toCoreMessages(messages: AgentMessage[]): CoreMessage[] {
   return messages.map((message) => {
@@ -33,21 +37,100 @@ function toCoreMessages(messages: AgentMessage[]): CoreMessage[] {
   });
 }
 
+function toVercelTools<T extends z.ZodSchema>(
+  // biome-ignore lint/suspicious/noExplicitAny: user defined
+  tools?: Record<string, Tool<T, any>>,
+): Record<string, VercelTool> {
+  if (!tools) {
+    return {};
+  }
+  const vercelTools: Record<string, VercelTool> = {};
+  for (const [name, tool] of Object.entries(tools)) {
+    // @ts-expect-error - exactOptionalPropertyTypes causing issues
+    vercelTools[name] = vercelTool({
+      description: tool.description,
+      parameters: tool.schema,
+    });
+  }
+  return vercelTools;
+}
+
 export function createVercelAIProvider({
   model,
-}: { model: LanguageModel }): AIProvider {
+  ...vercelOptions
+}: {
+  model: LanguageModel;
+} & Pick<
+  Parameters<typeof generateText>[0],
+  | "topP"
+  | "temperature"
+  | "topK"
+  | "frequencyPenalty"
+  | "presencePenalty"
+  | "providerOptions"
+  | "maxRetries"
+  | "maxTokens"
+>): AIProvider {
   return {
     modelName() {
       return Promise.resolve(model.modelId);
     },
-    async generateText(options: {
-      systemPrompt?: string;
-      messages: AgentMessage[];
-    }): Promise<GenerateTextResult> {
+    async generateText(options): Promise<GenerateTextResult> {
+      const tools = toVercelTools(options.tools);
       const result = await generateText({
         model,
         ...(options.systemPrompt ? { system: options.systemPrompt } : {}),
         messages: toCoreMessages(options.messages),
+        tools,
+        // to keep o3 performant and fast
+        providerOptions: {
+          openai: {
+            reasoningEffort: "low",
+            reasoningSummary: "auto",
+          },
+        },
+        experimental_repairToolCall: async ({
+          toolCall,
+          parameterSchema,
+          error,
+        }) => {
+          // do not attempt to fix invalid tool names
+          if (NoSuchToolError.isInstance(error)) {
+            return null;
+          }
+
+          const toolCallResult = parseComputerToolArgs(toolCall.args);
+          if (!toolCallResult) {
+            return null;
+          }
+
+          const result = await generateObject({
+            model: model,
+            schema: toolCallResult.schema,
+            prompt: [
+              `The model tried to call the tool "${toolCall.toolName}" with the following arguments:`,
+              JSON.stringify(toolCall.args),
+              "The tool accepts the following schema:",
+              JSON.stringify(parameterSchema(toolCall)),
+              "Please fix the arguments.",
+            ].join("\n"),
+            maxRetries: 3,
+          });
+          if (!result) {
+            return null;
+          }
+
+          return {
+            ...toolCall,
+            args: JSON.stringify({
+              action: result.object,
+              reasoning: toolCallResult.args.reasoning,
+            }),
+          };
+        },
+        maxSteps: 1,
+        maxRetries: 3,
+        ...vercelOptions,
       });
 
       return {
@@ -60,7 +143,7 @@ export function createVercelAIProvider({
         usage: result.usage,
       };
     },
-    async generateObject<T extends StandardSchemaV1>(options: {
+    async generateObject<T extends z.ZodSchema>(options: {
       schema: T;
       prompt: string;
       systemPrompt?: string;
@@ -68,12 +151,14 @@ export function createVercelAIProvider({
     }): Promise<GenerateObjectResult<T>> {
       const result = await generateObject({
         model,
-        schema: jsonSchema<StandardSchemaV1.InferOutput<T>>(options.schema),
+        schema: options.schema,
         ...(options.systemPrompt ? { system: options.systemPrompt } : {}),
         messages: toCoreMessages(options.messages ?? []),
+        maxRetries: 3,
+        ...vercelOptions,
       });
       return {
-        object: result.object,
+        object: result.object as z.infer<T>,
         usage: result.usage,
       };
     },

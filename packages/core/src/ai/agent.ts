@@ -1,10 +1,5 @@
-import type { StandardSchemaV1 } from "@standard-schema/spec";
-import type {
-  AIProvider,
-  AgentLog,
-  AgentMessage,
-  GenerateObjectResult,
-} from ".";
+import { z } from "zod";
+import type { AIProvider, AgentLog, AgentMessage } from ".";
 import { type Tool, createCompleteTaskTool } from "../tools";
 import {
   type ComputerActionResult,
@@ -29,30 +24,32 @@ export function createAgent(options: {
   const sessionManager = {
     initialize: async (sessionIdOverride?: string) => {
       const sessionId = sessionIdOverride ?? sessionIdGenerator();
-      try {
-        const { computerProviderId, liveUrl } =
-          await computerProvider.start(sessionId);
-        const session = {
-          id: sessionId,
-          computer: {
-            id: computerProviderId,
-            liveUrl,
-          },
-        };
-        return session;
-      } catch (error) {
-        throw new ComputerProviderError("Failed to start computer provider", {
-          cause: error,
+      const { computerProviderId, liveUrl } = await computerProvider
+        .start(sessionId)
+        .catch((error) => {
+          throw new ComputerProviderError("Failed to start computer provider", {
+            cause: error,
+          });
         });
-      }
+      const session = {
+        id: sessionId,
+        computer: {
+          id: computerProviderId,
+          liveUrl,
+        },
+      };
+      return session;
     },
-    run: async <T extends StandardSchemaV1>(task: {
+    end: async (sessionId: string) => {
+      await computerProvider.stop(sessionId);
+    },
+    run: async <T extends z.ZodSchema>(task: {
       sessionId: string;
       instructions: string;
-      outputSchema: T;
+      outputSchema?: T;
       // biome-ignore lint/suspicious/noExplicitAny: user defined
-      customTools?: Record<string, Tool<StandardSchemaV1, any>>;
-    }): Promise<GenerateObjectResult<T>> => {
+      customTools?: Record<string, Tool<z.ZodSchema, any>>;
+    }): Promise<{ result: z.infer<T> }> => {
       const MAX_STEPS = 300;
       const CONVERSATION_LOOK_BACK = 7;
 
@@ -62,11 +59,11 @@ export function createAgent(options: {
         }),
         complete_task: createCompleteTaskTool({
           aiProvider,
-          outputSchema: task.outputSchema,
+          outputSchema: task.outputSchema ?? z.string(),
         }),
       };
       // biome-ignore lint/suspicious/noExplicitAny: user defined
-      const allTools: Record<string, Tool<StandardSchemaV1, any>> = {
+      const allTools: Record<string, Tool<z.ZodSchema, any>> = {
         ...coreTools,
         ...task.customTools,
       };
@@ -152,7 +149,9 @@ Here is the current state of the screen:`,
       while (step < MAX_STEPS) {
         const messages = getMessageInput(step);
         logger.info(`[Agent]: Step ${step}`, {
-          messages: messages.map((m) => m.content),
+          messages: messages.map((m) =>
+            m.content.flatMap((c) => (c.type === "text" ? c.text : c.type)),
+          ),
         });
 
         // Generate model response
@@ -275,18 +274,34 @@ Here is the current state of the screen:`,
               );
             });
 
+          logger.info("[Agent] Tool call result", {
+            result: {
+              ...result,
+              ...(typeof result === "object" &&
+              !!result &&
+              "screenshot" in result
+                ? {
+                    screenshot:
+                      result.screenshot instanceof URL
+                        ? result.screenshot.toString()
+                        : "image-data",
+                  }
+                : {}),
+            },
+          });
           // If the tool is `complete_task`, we should return the result and stop the agent.
           if (toolCall.toolName === "complete_task") {
-            logger.info("[Agent] Task completed", { result });
-            return result;
+            return { result: result.output };
           }
 
           // For computer actions, we expect a certain output to build the next message.
           if (toolCall.toolName === "computer_action") {
             const computerActionResult = result as ComputerActionResult & {
-              screenshotUrl: string;
+              screenshot: string | URL;
             };
-            agentLog.screenshot = computerActionResult.screenshotUrl;
+            agentLog.screenshot = computerActionResult.screenshot.toString();
+            agentLog.modelOutput.done.reasoning =
+              computerActionResult.reasoning;
             buildMessageInput(step + 1, [
               {
                 role: "user",
@@ -297,7 +312,7 @@ Here is the current state of the screen:`,
                   },
                   {
                     type: "image",
-                    image: new URL(computerActionResult.screenshotUrl),
+                    image: computerActionResult.screenshot,
                   },
                 ],
               },

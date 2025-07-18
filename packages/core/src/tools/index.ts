@@ -1,10 +1,10 @@
-import type { StandardSchemaV1 } from "@standard-schema/spec";
+import type { z } from "zod";
 import type { AgentMessage } from "../ai";
 
 /**
  * Defines a tool that the agent can execute.
  */
-export interface Tool<T extends StandardSchemaV1, Output> {
+export interface Tool<T extends z.ZodSchema, Output> {
   /** A description of what the tool does, for use by the AI model. */
   description: string;
 
@@ -13,7 +13,7 @@ export interface Tool<T extends StandardSchemaV1, Output> {
 
   /** The function to execute when the tool is called. */
   execute(
-    args: StandardSchemaV1.InferOutput<T>,
+    args: z.infer<T>,
     context: {
       toolCallId: string;
       sessionId: string;

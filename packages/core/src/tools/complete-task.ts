@@ -1,5 +1,4 @@
-import type { StandardSchemaV1 } from "@standard-schema/spec";
-import z from "zod";
+import { z } from "zod";
 import type { Tool } from ".";
 import type { AIProvider, UserMessage } from "../ai";
 
@@ -21,18 +20,16 @@ const completeTaskSchema = z.object({
     ),
 });
 
-export function createCompleteTaskTool<T extends StandardSchemaV1>({
+export function createCompleteTaskTool<T extends z.ZodSchema>({
   aiProvider,
   outputSchema,
 }: {
   aiProvider: AIProvider;
   outputSchema: T;
-}): Tool<
-  typeof completeTaskSchema,
-  { output: StandardSchemaV1.InferOutput<T> }
-> {
+}): Tool<typeof completeTaskSchema, { output: z.infer<T> }> {
   return {
-    description: "Completes the task.",
+    description:
+      "Declare that the task is complete. This tool MUST be used to officially end the task. The task cannot be completed without calling this tool.",
     schema: completeTaskSchema,
     execute: async (args, context) => {
       const fullHistory = [

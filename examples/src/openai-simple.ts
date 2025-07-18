@@ -2,13 +2,18 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createVercelAIProvider } from "@trymeka/ai-provider-vercel";
 import { createScrapybaraComputerProvider } from "@trymeka/computer-provider-scrapybara";
 import { createAgent } from "@trymeka/core/ai/agent";
-import { z } from "zod/mini";
+import { z } from "zod";
 
 if (!process.env.SCRAPYBARA_API_KEY) {
   throw new Error("SCRAPYBARA_API_KEY is not set");
 }
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error("OPENAI_API_KEY is not set");
+}
 
-const openai = createOpenAI();
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 const agent = createAgent({
   aiProvider: createVercelAIProvider({
@@ -16,18 +21,30 @@ const agent = createAgent({
   }),
   computerProvider: createScrapybaraComputerProvider({
     apiKey: process.env.SCRAPYBARA_API_KEY,
-    initialUrl: "https://www.google.com",
+    initialUrl: "https://www.guardiandentistry.com/our-network",
+    logger: console,
   }),
+  logger: console,
 });
 
 const session = await agent.session.initialize();
-console.log("session", session);
-const { object } = await agent.session.run({
+const { result } = await agent.session.run({
   sessionId: session.id,
-  instructions: "Why is the sky blue?",
+  instructions:
+    "Find the email address and phone number for the various practices in the location list.",
   outputSchema: z.object({
-    answer: z.string(),
+    locations: z.array(
+      z.object({
+        name: z.string(),
+        address: z.string(),
+        phone: z.string(),
+        website: z.string(),
+        email: z.string(),
+      }),
+    ),
   }),
 });
+await agent.session.end(session.id);
 
-console.log(object);
+console.log(JSON.stringify(result, null, 2));
+process.exit(0);

@@ -148,6 +148,7 @@ export interface ComputerProvider {
   performAction(
     action: ComputerAction,
     context: {
+      reasoning?: string;
       sessionId: string;
       step: number;
     },
@@ -163,20 +164,28 @@ export interface ComputerProvider {
   screenSize(): Promise<{ width: number; height: number }>;
 }
 
+const computerToolSchema = z.object({
+  action: computerActionSchema,
+  reasoning: z
+    .string()
+    .describe(
+      "The reasoning for performing the action. Make sure you provide a clear and concise reasoning for the action so that users can understand what you are doing.",
+    ),
+});
 export function createComputerTool({
   computerProvider,
 }: {
   computerProvider: ComputerProvider;
 }): Tool<
-  typeof computerActionSchema,
+  typeof computerToolSchema,
   ComputerActionResult & { screenshot: string | URL }
 > {
   return {
     description:
       "Execute a computer action like clicking, dragging, typing, scrolling, etc. Use this for ALL interactions with the screen.",
-    schema: computerActionSchema,
+    schema: computerToolSchema,
     execute: async (args, context) => {
-      const result = await computerProvider.performAction(args, context);
+      const result = await computerProvider.performAction(args.action, context);
       const screenshot = await computerProvider.takeScreenshot(
         context.sessionId,
       );
