@@ -5,7 +5,6 @@ import type {
   AgentMessage,
   GenerateObjectResult,
 } from ".";
-import { type Logger, createNoOpLogger } from "../logger";
 import { type Tool, createCompleteTaskTool } from "../tools";
 import {
   type ComputerActionResult,
@@ -13,6 +12,7 @@ import {
   createComputerTool,
 } from "../tools/computer";
 import { ComputerProviderError, ToolCallError } from "../tools/errors";
+import { type Logger, createNoOpLogger } from "../utils/logger";
 import { AIProviderError, AgentOutOfStepsError } from "./errors";
 import { SYSTEM_PROMPT } from "./prompts/system";
 
@@ -111,11 +111,16 @@ export function createAgent(options: {
           cause: error,
         });
       });
-      const firstScreenshot = await computerProvider.takeScreenshot(
-        task.sessionId,
-      );
-      const { url: firstScreenshotUrl } = await computerProvider
-        .uploadScreenshot({
+      const modelName = await aiProvider.modelName();
+      const firstScreenshot = await computerProvider
+        .takeScreenshot(task.sessionId)
+        .catch((error) => {
+          throw new ComputerProviderError("Failed to take screenshot", {
+            cause: error,
+          });
+        });
+      const uploadResult = await computerProvider
+        .uploadScreenshot?.({
           screenshotBase64: firstScreenshot,
           sessionId: task.sessionId,
           step: step,
@@ -125,9 +130,7 @@ export function createAgent(options: {
             cause: error,
           });
         });
-      logger.info("[Agent] screenshot uploaded", {
-        firstScreenshotUrl,
-      });
+
       buildMessageInput(step, [
         {
           role: "user",
@@ -140,7 +143,7 @@ Here is the current state of the screen:`,
             },
             {
               type: "image",
-              image: new URL(firstScreenshotUrl),
+              image: uploadResult ? new URL(uploadResult.url) : firstScreenshot,
             },
           ],
         },
@@ -220,7 +223,7 @@ Here is the current state of the screen:`,
             },
           },
           usage: {
-            model: aiProvider.modelName,
+            model: modelName,
             inputTokensStep: response.usage?.promptTokens,
             outputTokensStep: response.usage?.completionTokens,
             totalTokensStep: response.usage?.totalTokens,

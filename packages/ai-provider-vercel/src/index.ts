@@ -37,8 +37,8 @@ export function createVercelAIProvider({
   model,
 }: { model: LanguageModel }): AIProvider {
   return {
-    get modelName() {
-      return model.modelId;
+    modelName() {
+      return Promise.resolve(model.modelId);
     },
     async generateText(options: {
       systemPrompt?: string;

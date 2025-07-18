@@ -82,7 +82,7 @@ export interface AIProvider {
   /**
    * The name of the model used for the generation.
    */
-  modelName: string;
+  modelName(): Promise<string>;
   /**
    * Generates a textual response from the model.
    */

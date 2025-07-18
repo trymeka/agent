@@ -136,11 +136,13 @@ export interface ComputerProvider {
   takeScreenshot(sessionId: string): Promise<string>; // Returns base64 image string
 
   /** Uploads a screenshot and returns its public URL. */
-  uploadScreenshot(options: {
-    screenshotBase64: string;
-    sessionId: string;
-    step: number;
-  }): Promise<{ url: string }>;
+  uploadScreenshot:
+    | ((options: {
+        screenshotBase64: string;
+        sessionId: string;
+        step: number;
+      }) => Promise<{ url: string }>)
+    | undefined;
 
   /** Executes a standard computer action. */
   performAction(
@@ -167,7 +169,7 @@ export function createComputerTool({
   computerProvider: ComputerProvider;
 }): Tool<
   typeof computerActionSchema,
-  ComputerActionResult & { screenshotUrl: string }
+  ComputerActionResult & { screenshot: string | URL }
 > {
   return {
     description:
@@ -178,14 +180,16 @@ export function createComputerTool({
       const screenshot = await computerProvider.takeScreenshot(
         context.sessionId,
       );
-      const screenshotUrl = await computerProvider.uploadScreenshot({
+      const screenshotUrl = await computerProvider.uploadScreenshot?.({
         screenshotBase64: screenshot,
         sessionId: context.sessionId,
         step: context.step,
       });
       return {
         ...result,
-        screenshotUrl: screenshotUrl.url,
+        screenshot: screenshotUrl?.url
+          ? new URL(screenshotUrl.url)
+          : screenshot,
       };
     },
   };
