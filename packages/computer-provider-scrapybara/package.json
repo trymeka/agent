@@ -31,8 +31,10 @@
   },
   "dependencies": {
     "@trymeka/core": "workspace:*",
-    "playwright-core": "^1.54.1",
     "scrapybara": "^2.5.2"
+  },
+  "peerDependencies": {
+    "playwright-core": "^1.54.1"
   },
   "devDependencies": {
     "@trymeka/typescript": "workspace:*",
