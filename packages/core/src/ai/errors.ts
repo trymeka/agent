@@ -5,9 +5,9 @@ export class AIProviderError extends Error {
   }
 }
 
-export class AgentOutOfStepsError extends Error {
+export class AgentError extends Error {
   constructor(message: string, options?: { cause?: unknown }) {
     super(message, options);
-    this.name = "AgentOutOfStepsError";
+    this.name = "AgentError";
   }
 }

@@ -27,17 +27,37 @@ const agent = createAgent({
   logger: console,
 });
 
-const session = await agent.session.initialize();
+const session = await agent.initializeSession();
 console.log("session created", session);
-const { result } = await agent.session.run({
-  sessionId: session.id,
-  instructions: "Search hacker news for the latest 5 news.",
-  outputSchema: z.object({
-    newsHeadlines: z.array(z.string()),
-  }),
-});
-console.log(JSON.stringify(result, null, 2));
+session
+  .runTask({
+    instructions: "Search hacker news for the latest 5 news.",
+    outputSchema: z.object({
+      newsHeadlines: z.array(z.string()),
+    }),
+  })
+  .then(async (result) => {
+    console.log("results", JSON.stringify(result, null, 2));
+    await session.end();
+    process.exit(0);
+  });
 
-await agent.session.end(session.id);
-
-process.exit(0);
+setInterval(() => {
+  const current = session.get();
+  console.log("session status", current.status);
+  console.log("liveUrl", current.liveUrl);
+  console.log(
+    "session task",
+    current.tasks.map((task) => {
+      return {
+        logs: task.logs.map((log) => {
+          return {
+            ...log,
+            screenshot: "image-data",
+          };
+        }),
+        result: task.result,
+      };
+    }),
+  );
+}, 5_000);
