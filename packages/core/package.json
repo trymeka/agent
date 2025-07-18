@@ -1,6 +1,6 @@
 {
   "name": "@trymeka/core",
-  "version": "0.0.1",
+  "version": "0.0.4",
   "type": "module",
   "publishConfig": {
     "access": "public"
