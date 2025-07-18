@@ -1,12 +1,13 @@
 {
   "name": "trymeka",
   "private": true,
-  "workspaces": ["apps/*", "packages/*", "tooling/*"],
+  "workspaces": ["examples", "packages/*", "tooling/*"],
   "scripts": {
     "clean": "git clean -xdf node_modules .turbo .sst",
     "clean:workspaces": "turbo clean",
     "new:package": "turbo gen package",
-    "dev": "docker compose up -d && turbo run dev",
+    "example": "pnpm dotenvx run -- pnpm tsx --conditions=typescript",
+    "dev": "turbo run dev",
     "build": "turbo build",
     "changeset": "changeset",
     "changeset:release": "pnpm run build && changeset publish",
@@ -18,8 +19,11 @@
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
     "@changesets/cli": "^2.29.4",
+    "@dotenvx/dotenvx": "^1.48.0",
     "@trymeka/typescript": "workspace:*",
     "@turbo/gen": "^2.5.4",
+    "@types/node": "^24.0.14",
+    "tsx": "^4.20.3",
     "turbo": "^2.5.4",
     "typescript": "^5.8.3"
   },

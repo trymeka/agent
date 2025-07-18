@@ -1,89 +1,68 @@
-# Basic Monorepo Template
+# Meka Agent
 
-This repo sets up a basic typescript monorepo.
+Meka Agent is a framework for building, running, and deploying autonomous Computer use AI agents. It's designed to be simple, extensible, and easy to use.
 
-## Structure
+## Key Features
 
-This monorepo uses Turborepo and contains the following structure:
+- **Bring your own LLM**: Meka is inherently hackable and works with any Modal that vercel AI sdk supports today.
+- **Extensible**: Meka is designed to be extensible. You can easily add your own tools and providers to the agent.
+- **Open Source**: Meka is oepn and builds on learnings that we've developed over testing ai agents on autonomous task.
+- **Typesafe**: Meka is written in TypeScript and provides a typesafe API for building and interacting with agents.
 
-- `apps`: Contains the applications (e.g., `web`, `docs`).
-- `packages`: Contains shared packages used across applications (e.g., `ui`, `config`, `db`).
+## Getting Started
 
-## Environment Variables
-
-Environment variables are managed using `pnpm`. There's 3 layers to it:
-
-```bash
-.env.production // used for production builds
-.env // used in local development and preview builds
-.env.local // used in local development
-```
-
- To set an environment variable, use:
+To get started with Meka, install the various providers
 
 ```bash
-pnpm env:set <VARIABLE_NAME> <VALUE>
+npm install @trymeka/core @trymeka/ai-provider-vercel @ai-sdk/openai @trymeka/computer-provider-scrapybara
 ```
 
-This command updates the `.env` file in the root by default.
+Grab API keys from OpenAI and scrapybara, the computer provider.
 
-Use the `-f` flag to target a specific file, for e.g. `.env.local`or `.env.production` :
+Then instantiate the agent.
 
-```bash
-pnpm env:set <VARIABLE_NAME> <VALUE> -f .env.local
+```typescript
+const aiProvider = createVercelAIProvider({
+  model: createOpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  })("o3"),
+});
+const computerProvider = createScrapybaraComputerProvider({
+  apiKey: process.env.SCRAPYBARA_API_KEY,
+  initialUrl: "https://www.guardiandentistry.com/our-network",
+});
+
+const agent = createAgent({
+  aiProvider,
+  computerProvider,
+  logger: console,
+});
+
+const session = await agent.session.initialize();
+const { result } = await agent.session.run({
+  sessionId: session.id,
+  instructions:
+    "Find the email address and phone number for the various practices in the location list.",
+  outputSchema: z.object({
+    locations: z.array(
+      z.object({
+        name: z.string(),
+        address: z.string(),
+        phone: z.string(),
+        website: z.string(),
+        email: z.string(),
+      }),
+    ),
+  }),
+});
+await agent.session.end(session.id);
+console.log(JSON.stringify(result, null, 2));
 ```
 
-The `.env.local` file is ignored by Git and allows you to have local-specific settings.
+## Contributing
 
-The values in all `.env` files are encrypted by default so it can be easily shared across teams. Refer to the [dotenvx](https://dotenvx.com/) documentation for more.
+We welcome contributions to Meka Agent! If you'd like to contribute, please read our [contributing guidelines](CONTRIBUTING.md) to get started.
 
-## Database
+## License
 
-This project uses PostgreSQL as its database. A Docker Compose setup is provided for easy local development when you run `pnpm dev`
-
-## Development
-
-You'll need Docker to be running.
-
-Run `pnpm dev` to start up the frontend and server.
-
-Finally visit `https://localhost:6969` to see your dev
- server
-
-### First time set-up
-
-If this is your first time setting things up, you'll have to do a few extra things:
-
-1. Run `docker compose up -d` to launch the postgres DB.
-2. Run `pnpm db:push` to update the db with the default schema
-3. Run `pnpm dev`. Note you might have to accept some certs since we use the `mkcert` vite plugin to develop on `https` by default.
-
-### Adding new package
-
-To add a new package to the monorepo, run:
-
-```bash
-pnpm new:package
-```
-
-This command will walk you through the process of scaffolding a new package directory under `packages/`with the necessary basic configuration files.
-
-## Building
-
-To build the applications for production, run:
-
-```bash
-pnpm build:production
-```
-
-To build and preview the applications, run:
-
-```bash
-pnpm build:preview
-```
-
-The main difference is that `pnpm build:production` uses the `.env.production` file while `build:preview` uses the `.env` file.
-
-## Credits
-
-This repository was originally inspired by via [create t3 turbo](https://github.com/t3-oss/create-t3-turbo) and wouldn't be possible without all the other open source tooling.
+Meka Agent is licensed under the MIT License. See the [LICENSE](LICENSE) file for more information.

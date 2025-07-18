@@ -1,5 +1,5 @@
 {
-  "name": "@trymeka/core",
+  "name": "@trymeka/ai-provider-vercel",
   "version": "0.0.1",
   "type": "module",
   "publishConfig": {
@@ -10,31 +10,15 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/trymeka/agent.git",
-    "directory": "packages/agent"
+    "directory": "packages/ai-provider-vercel"
   },
   "license": "MIT",
-  "homepage": "https://github.com/trymeka/agent/tree/main/packages/agent#readme",
+  "homepage": "https://github.com/trymeka/agent/tree/main/packages/ai-provider-vercel#readme",
   "files": ["dist", "!dist/**/*.map", "README.md"],
   "exports": {
     ".": {
-      "typescript": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    },
-    "./ai/*": {
-      "typescript": "./src/ai/*.ts",
-      "types": "./dist/ai/*.d.ts",
-      "import": "./dist/ai/*.js"
-    },
-    "./tools/*": {
-      "typescript": "./src/tools/*.ts",
-      "types": "./dist/tools/*.d.ts",
-      "import": "./dist/tools/*.js"
-    },
-    "./utils/*": {
-      "typescript": "./src/utils/*.ts",
-      "types": "./dist/utils/*.d.ts",
-      "import": "./dist/utils/*.js"
     }
   },
   "scripts": {
@@ -46,6 +30,8 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
+    "@trymeka/core": "workspace:*",
+    "ai": "^4.3.15",
     "zod": "^3.24.4"
   },
   "devDependencies": {

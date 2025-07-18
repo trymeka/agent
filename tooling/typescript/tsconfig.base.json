@@ -3,7 +3,7 @@
   "compilerOptions": {
     /** Base Options */
     "target": "ES2022",
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM"],
     "moduleDetection": "force",
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -34,7 +34,16 @@
     /** Transpile using Bundler (not tsc) */
     "module": "Preserve",
     "moduleResolution": "Bundler",
-    "noEmit": true
+    "noEmit": true,
+    "paths": {
+      "@trymeka/core": ["./packages/core/src"],
+      "@trymeka/core/*": ["./packages/core/src/*"],
+      "@trymeka/computer-provider-scrapybara": [
+        "./packages/computer-provider-scrapybara/src"
+      ],
+      "@trymeka/ai-provider-vercel": ["./packages/ai-provider-vercel/src"],
+      "@trymeka/ai-provider-vercel/*": ["./packages/ai-provider-vercel/src/*"]
+    }
   },
   "exclude": [
     "node_modules",

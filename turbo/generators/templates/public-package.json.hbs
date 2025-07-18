@@ -11,11 +11,11 @@
 ],
 "repository": {
 "type": "git",
-"url": "git+https://github.com/ElasticBottle/trymeka.git",
+"url": "git+https://github.com/trymeka/agent.git",
 "directory": "packages/{{ dashCase name }}"
 },
 "license": "MIT",
-"homepage": "https://github.com/ElasticBottle/trymeka/tree/main/packages/{{ dashCase name }}#readme",
+"homepage": "https://github.com/trymeka/agent/tree/main/packages/{{ dashCase name }}#readme",
 "files": ["dist", "!dist/**/*.map", "README.md"],
 "exports": {
 ".": {
@@ -27,8 +27,8 @@
 "build": "tsup",
 "dev": "tsup --watch",
 "clean": "git clean -xdf .turbo node_modules dist .cache",
-"format": "pnpm @biomejs/biome format . --write",
-"lint": "pnpm @biomejs/biome lint . --write",
+"format": "pnpx @biomejs/biome@1.9.4 format . --write",
+"lint": "pnpx @biomejs/biome@1.9.4 lint . --write",
 "typecheck": "tsc --noEmit --emitDeclarationOnly false"
 },
 "devDependencies": {

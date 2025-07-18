@@ -58,7 +58,9 @@ pnpm-debug.log*
 lerna-debug.log*
 
 # local env files
-.env.keys
+.env
+.env.*
+!.env.example
 .dev.vars
 
 # vercel
