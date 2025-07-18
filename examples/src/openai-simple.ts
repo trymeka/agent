@@ -58,12 +58,14 @@ setInterval(() => {
     "session task",
     current.tasks.map((task) => {
       return {
-        logs: task.logs.map((log) => {
-          return {
-            ...log,
-            screenshot: "image-data",
-          };
-        }),
+        logs: JSON.stringify(
+          task.logs.map((log) => {
+            return {
+              ...log,
+              screenshot: "image-data",
+            };
+          }),
+        ),
         result: task.result,
       };
     }),
