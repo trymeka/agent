@@ -6,7 +6,7 @@
     "clean": "git clean -xdf node_modules .turbo .sst",
     "clean:workspaces": "turbo clean",
     "new:package": "turbo gen package",
-    "examples": "pnpm dotenvx run -- pnpm tsx --conditions=typescript",
+    "example": "pnpm dotenvx run -- pnpm tsx --conditions=typescript",
     "dev": "turbo run dev",
     "build": "turbo build",
     "changeset": "changeset",
