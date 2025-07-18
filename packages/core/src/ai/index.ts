@@ -1,14 +1,13 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { Tool } from "../tools";
 
-/**
- * Defines the structured messages used for conversations.
- */
-export interface UserMessage {
-  role: "user";
-  content: Array<
-    { type: "text"; text: string } | { type: "image"; image: string }
-  >;
+export interface TextContent {
+  type: "text";
+  text: string;
+}
+export interface ImageContent {
+  type: "image";
+  image: string | URL;
 }
 
 export interface ToolCall {
@@ -16,29 +15,64 @@ export interface ToolCall {
   toolName: string;
   args: unknown;
 }
+
+/**
+ * Defines the structured messages used for conversations.
+ */
+export interface UserMessage {
+  role: "user";
+  content: (TextContent | ImageContent)[];
+}
+
 export interface AssistantMessage {
   role: "assistant";
-  content: Array<{ type: "text"; text: string }>;
+  content: TextContent[];
   toolCalls?: ToolCall[];
 }
 
 export type AgentMessage = UserMessage | AssistantMessage;
-
+export interface AgentLog {
+  screenshot: string;
+  step: number;
+  timestamp: string;
+  modelOutput: {
+    done: {
+      type: "text";
+      text: string;
+      reasoning?: string;
+    };
+  };
+  usage: {
+    model: string;
+    inputTokensStep?: number | undefined;
+    outputTokensStep?: number | undefined;
+    totalTokensStep?: number | undefined;
+  };
+}
 /**
  * The result of a `generateText` call.
  */
 export interface GenerateTextResult {
-  text: string;
-  toolCalls?: ToolCall[];
-  // ... other metadata like usage, finishReason
+  text?: string;
+  reasoning?: string;
+  toolCalls: ToolCall[];
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
 }
 
 /**
  * The result of a `generateObject` call.
  */
-export interface GenerateObjectResult<T> {
-  object: T;
-  // ... other metadata
+export interface GenerateObjectResult<T extends StandardSchemaV1> {
+  object: StandardSchemaV1.InferOutput<T>;
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
 }
 
 /**
@@ -46,12 +80,17 @@ export interface GenerateObjectResult<T> {
  */
 export interface AIProvider {
   /**
+   * The name of the model used for the generation.
+   */
+  modelName: string;
+  /**
    * Generates a textual response from the model.
    */
   generateText(options: {
     systemPrompt?: string;
     messages: AgentMessage[];
-    tools?: Record<string, Tool<StandardSchemaV1>>;
+    // biome-ignore lint/suspicious/noExplicitAny: user defined
+    tools?: Record<string, Tool<StandardSchemaV1, any>>;
   }): Promise<GenerateTextResult>;
 
   /**
@@ -59,7 +98,9 @@ export interface AIProvider {
    */
   generateObject<T extends StandardSchemaV1>(options: {
     schema: T;
-    prompt: string;
+    systemPrompt?: string;
     messages?: AgentMessage[];
-  }): Promise<StandardSchemaV1.InferOutput<T>>;
+  }): Promise<GenerateObjectResult<T>>;
 }
+
+export { createAgent } from "./agent";
