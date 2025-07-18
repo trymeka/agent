@@ -1,0 +1,39 @@
+{
+"name": "@trymeka/{{ dashCase name }}",
+"version": "0.0.1",
+"type": "module",
+"publishConfig": {
+"access": "public"
+},
+"description": "TODO: Add description",
+"keywords": [
+"trymeka"
+],
+"repository": {
+"type": "git",
+"url": "git+https://github.com/ElasticBottle/trymeka.git",
+"directory": "packages/{{ dashCase name }}"
+},
+"license": "MIT",
+"homepage": "https://github.com/ElasticBottle/trymeka/tree/main/packages/{{ dashCase name }}#readme",
+"files": ["dist", "!dist/**/*.map", "README.md"],
+"exports": {
+".": {
+"types": "./dist/index.d.ts",
+"import": "./dist/index.js"
+}
+},
+"scripts": {
+"build": "tsup",
+"dev": "tsup --watch",
+"clean": "git clean -xdf .turbo node_modules dist .cache",
+"format": "pnpm @biomejs/biome format . --write",
+"lint": "pnpm @biomejs/biome lint . --write",
+"typecheck": "tsc --noEmit --emitDeclarationOnly false"
+},
+"devDependencies": {
+"@trymeka/typescript": "workspace:*",
+"tsup": "^8.4.0",
+"typescript": "^5.8.3"
+}
+}

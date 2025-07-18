@@ -1,0 +1,80 @@
+{
+  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "organizeImports": { "enabled": true },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "nursery": {
+        "noEnum": "warn",
+        "noDuplicateElseIf": "error",
+        "noDynamicNamespaceImportAccess": "error",
+        "noExportedImports": "error",
+        "noMissingVarFunction": "error",
+        "useSortedClasses": {
+          "level": "error",
+          "fix": "safe",
+          "options": {
+            "attributes": [],
+            "functions": ["clsx", "cva", "tw", "cn"]
+          }
+        }
+      },
+      "correctness": {
+        "useHookAtTopLevel": "error",
+        "noNewSymbol": "error",
+        "useArrayLiterals": "error",
+        "noUnusedImports": "warn",
+        "noUnusedVariables": "warn",
+        "noUnusedPrivateClassMembers": "error"
+      },
+      "style": {
+        "noRestrictedGlobals": {
+          "options": { "deniedGlobals": ["Buffer"] },
+          "level": "error"
+        },
+        "useConsistentArrayType": {
+          "level": "error",
+          "options": {
+            "syntax": "shorthand"
+          }
+        },
+        "noNamespace": "error",
+        "useForOf": "error"
+      },
+      "suspicious": {
+        "noEmptyBlockStatements": "error",
+        "useAwait": "error"
+      }
+    }
+  },
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git"
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "ignore": ["database.ts"]
+  },
+  "javascript": { "globals": [] },
+  "json": {
+    "parser": {
+      "allowComments": true,
+      "allowTrailingCommas": true
+    }
+  },
+  "overrides": [],
+  "files": {
+    "ignore": [
+      "node_modules",
+      ".sst",
+      ".turbo",
+      ".cache",
+      "dist",
+      "routeTree.gen.ts",
+      "sst-env.d.ts",
+      "_renderer.tsx"
+    ]
+  }
+}

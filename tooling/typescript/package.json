@@ -1,0 +1,5 @@
+{
+  "name": "@trymeka/typescript",
+  "private": true,
+  "files": ["*.json"]
+}

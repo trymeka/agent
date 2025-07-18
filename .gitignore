@@ -1,0 +1,99 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+node_modules
+.pnp
+.pnp.js
+.wrangler
+dist-ssr
+*.local
+.venv
+__pycache__
+
+# testing
+coverage
+
+# next.js
+.next/
+out/
+next-env.d.ts
+.open-next
+
+# expo
+.expo/
+
+# production
+build
+dist/
+.cache/
+
+# generated types
+.astro/
+
+# dev
+.yarn/
+!.yarn/releases
+.idea/workspace.xml
+.idea/usage.statistics.xml
+.idea/shelf
+
+
+# misc
+.DS_Store
+*.pem
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+dump
+
+# debug
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# local env files
+.env.keys
+.dev.vars
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+
+# turbo
+.turbo
+
+# react-email
+.react-email
+packages/email/public
+!packages/email/public/.gitkeep
+!packages/email/.react-email/.gitkeep
+
+# Storybook
+storybook-static
+tailwind.css
+
+# Supabase
+.branches
+.temp
+
+# DB stuff
+*.db
+*.db*
+temp-store
+
+# sst
+.sst
+sst-env.d.ts
+
+# AI autocomplete
+.aider*
+.cursorrules
+

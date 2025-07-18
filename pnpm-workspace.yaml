@@ -1,0 +1,8 @@
+packages:
+  - apps/*
+  - packages/*
+  - tooling/*
+onlyBuiltDependencies:
+  - "@biomejs/biome"
+  - better-sqlite3
+  - esbuild

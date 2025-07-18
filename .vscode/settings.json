@@ -1,0 +1,21 @@
+{
+  // allow autocomplete for ArkType expressions like "string | num"
+  "editor.quickSuggestions": {
+    "strings": "on"
+  },
+  // prioritize ArkType's "type" for autoimports
+  "typescript.preferences.autoImportSpecifierExcludeRegexes": [
+    "^(node:)?os$",
+    "^process$",
+    "^hono/adapter$"
+  ],
+  "cSpell.words": [
+    "Creds",
+    "dotenvx",
+    "millis",
+    "oklch",
+    "Sonner",
+    "totp",
+    "turso"
+  ]
+}

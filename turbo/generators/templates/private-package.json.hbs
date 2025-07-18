@@ -1,0 +1,24 @@
+{
+"name": "@trymeka/{{ dashCase name }}",
+"private": true,
+"version": "0.0.1",
+"type": "module",
+"exports": {
+".": {
+"types": "./dist/index.d.ts",
+"default": "./src/index.ts"
+}
+},
+"scripts": {
+"build": "tsc",
+"dev": "tsc --watch",
+"clean": "git clean -xdf .turbo node_modules dist .cache",
+"format": "pnpm @biomejs/biome format . --write",
+"lint": "pnpm @biomejs/biome lint . --write",
+"typecheck": "tsc --noEmit --emitDeclarationOnly false"
+},
+"devDependencies": {
+"@trymeka/typescript": "workspace:*",
+"typescript": "^5.7.3"
+}
+}

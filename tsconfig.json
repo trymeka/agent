@@ -1,0 +1,5 @@
+// This is only used if we add things like IAC down the line
+{
+  "extends": "@trymeka/typescript/tsconfig.base.json",
+  "exclude": ["apps", "packages", "dist"]
+}

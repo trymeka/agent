@@ -1,0 +1,27 @@
+{
+  "name": "trymeka",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*", "tooling/*"],
+  "scripts": {
+    "clean": "git clean -xdf node_modules .turbo .sst",
+    "clean:workspaces": "turbo clean",
+    "new:package": "turbo gen package",
+    "dev": "docker compose up -d && turbo run dev",
+    "build": "turbo build",
+    "changeset": "changeset",
+    "changeset:release": "pnpm run build && changeset publish",
+    "format": "turbo run format --continue",
+    "lint": "turbo run lint --continue",
+    "typecheck": "turbo run typecheck --continue",
+    "postinstall": "pnpx sherif@latest"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "@changesets/cli": "^2.29.4",
+    "@trymeka/typescript": "workspace:*",
+    "@turbo/gen": "^2.5.4",
+    "turbo": "^2.5.4",
+    "typescript": "^5.8.3"
+  },
+  "packageManager": "pnpm@10.12.1"
+}
