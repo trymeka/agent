@@ -1,5 +1,5 @@
 {
-  "name": "@trymeka/core",
+  "name": "@trymeka/computer-provider-scrapybara",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -11,10 +11,10 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ElasticBottle/trymeka.git",
-    "directory": "packages/agent"
+    "directory": "packages/computer-provider-scrapybara"
   },
   "license": "MIT",
-  "homepage": "https://github.com/ElasticBottle/trymeka/tree/main/packages/agent#readme",
+  "homepage": "https://github.com/ElasticBottle/trymeka/tree/main/packages/computer-provider-scrapybara#readme",
   "files": ["dist", "!dist/**/*.map", "README.md"],
   "exports": {
     ".": {
@@ -34,26 +34,11 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@standard-schema/spec": "^1.0.0",
-    "ai": "^4.3.19"
+    "@trymeka/core": "workspace:*"
   },
   "devDependencies": {
-    "@ai-sdk/anthropic": "^1.2.12",
-    "@ai-sdk/openai": "^1.3.23",
     "@trymeka/typescript": "workspace:*",
     "tsup": "^8.5.0",
     "typescript": "^5.8.3"
-  },
-  "peerDependencies": {
-    "@ai-sdk/anthropic": "^1.2.12",
-    "@ai-sdk/openai": "^1.3.23"
-  },
-  "peerDependenciesMeta": {
-    "@ai-sdk/anthropic": {
-      "optional": true
-    },
-    "@ai-sdk/openai": {
-      "optional": true
-    }
   }
 }

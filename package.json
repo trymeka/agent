@@ -1,7 +1,11 @@
 {
   "name": "trymeka",
   "private": true,
-  "workspaces": ["apps/*", "packages/*", "tooling/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "tooling/*"
+  ],
   "scripts": {
     "clean": "git clean -xdf node_modules .turbo .sst",
     "clean:workspaces": "turbo clean",
@@ -20,8 +24,19 @@
     "@changesets/cli": "^2.29.4",
     "@trymeka/typescript": "workspace:*",
     "@turbo/gen": "^2.5.4",
+    "@types/node": "^24.0.14",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "turbo": "^2.5.4",
     "typescript": "^5.8.3"
   },
-  "packageManager": "pnpm@10.12.1"
+  "packageManager": "pnpm@10.12.1",
+  "dependencies": {
+    "@ai-sdk/openai": "^1.3.23",
+    "@standard-schema/spec": "^1.0.0",
+    "ai": "^4.3.19",
+    "playwright-core": "^1.54.1",
+    "scrapybara": "^2.5.2",
+    "zod": "^4.0.5"
+  }
 }
