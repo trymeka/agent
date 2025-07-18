@@ -39,7 +39,7 @@ const agent = createAgent({
 });
 
 const session = await agent.session.initialize();
-const { result } = await agent.session.run({
+agent.session.run({
   sessionId: session.id,
   instructions:
     "Find the email address and phone number for the various practices in the location list.",
@@ -54,9 +54,17 @@ const { result } = await agent.session.run({
       }),
     ),
   }),
-});
-await agent.session.end(session.id);
-console.log(JSON.stringify(result, null, 2));
+}).then(async (result) => {
+    console.log("results", JSON.stringify(result, null, 2));
+    await session.end();
+    process.exit(0);
+  });
+
+// getting session status
+setInterval(() => {
+  const current = session.get();
+  console.log("current session", current);
+}, 5_000);
 ```
 
 ## Contributing
