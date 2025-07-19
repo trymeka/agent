@@ -24,6 +24,7 @@ export function createAgent(options: {
   const sessionMap = new Map<
     string,
     {
+      id: string;
       liveUrl: string;
       status: "queued" | "running" | "idle" | "stopped";
       tasks: {
@@ -391,6 +392,7 @@ export function createAgent(options: {
     initializeSession: async (sessionIdOverride?: string) => {
       const sessionId = sessionIdOverride ?? sessionIdGenerator();
       sessionMap.set(sessionId, {
+        id: sessionId,
         liveUrl: "",
         tasks: [],
         status: "queued",
@@ -403,6 +405,7 @@ export function createAgent(options: {
           });
         });
       sessionMap.set(sessionId, {
+        id: sessionId,
         liveUrl: liveUrl ?? "",
         tasks: [],
         status: "idle",

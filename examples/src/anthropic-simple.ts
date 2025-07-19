@@ -18,7 +18,7 @@ const aiProvider = createVercelAIProvider({
 });
 const computerProvider = createScrapybaraComputerProvider({
   apiKey: process.env.SCRAPYBARA_API_KEY,
-  initialUrl: "https://www.google.com",
+  initialUrl: "https://news.ycombinator.com/news",
 });
 
 const agent = createAgent({
@@ -29,37 +29,34 @@ const agent = createAgent({
 
 const session = await agent.initializeSession();
 console.log("session created", session);
-session
-  .runTask({
-    instructions: "Search hacker news for the latest 5 news.",
-    outputSchema: z.object({
-      newsHeadlines: z.array(z.string()),
-    }),
-  })
-  .then(async (result) => {
-    console.log("results", JSON.stringify(result, null, 2));
-    await session.end();
-    process.exit(0);
-  });
+const result = await session.runTask({
+  instructions: "Search hacker news for the latest 5 news.",
+  outputSchema: z.object({
+    newsHeadlines: z.array(z.string()),
+  }),
+});
 
-setInterval(() => {
-  const current = session.get();
-  console.log("session status", current.status);
-  console.log("liveUrl", current.liveUrl);
-  console.log(
-    "session task",
-    current.tasks.map((task) => {
-      return {
-        logs: JSON.stringify(
-          task.logs.map((log) => {
-            return {
-              ...log,
-              screenshot: "image-data",
-            };
-          }),
-        ),
-        result: task.result,
-      };
-    }),
-  );
-}, 5_000);
+console.log("results", JSON.stringify(result, null, 2));
+
+await session.end();
+const sessionDetails = session.get();
+
+console.log("session details", {
+  status: sessionDetails.status,
+  liveUrl: sessionDetails.liveUrl,
+  tasks: sessionDetails.tasks.map((task) => {
+    return {
+      logs: JSON.stringify(
+        task.logs.map((log) => {
+          return {
+            ...log,
+            screenshot: "image-data",
+          };
+        }),
+      ),
+      result: task.result,
+    };
+  }),
+});
+
+process.exit(0);

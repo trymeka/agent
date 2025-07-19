@@ -28,46 +28,40 @@ const agent = createAgent({
 });
 
 const session = await agent.initializeSession();
-session
-  .runTask({
-    instructions:
-      "Find the email address and phone number for the various practices in the location list.",
-    outputSchema: z.object({
-      locations: z.array(
-        z.object({
-          name: z.string(),
-          address: z.string(),
-          phone: z.string(),
-          website: z.string(),
-          email: z.string(),
+const result = await session.runTask({
+  instructions:
+    "Find the email address and phone number for the various practices in the location list.",
+  outputSchema: z.object({
+    locations: z.array(
+      z.object({
+        name: z.string(),
+        address: z.string(),
+        phone: z.string(),
+        website: z.string(),
+        email: z.string(),
+      }),
+    ),
+  }),
+});
+console.log("results", JSON.stringify(result, null, 2));
+
+await session.end();
+const sessionDetails = session.get();
+
+console.log(
+  "session details",
+  sessionDetails.tasks.map((task) => {
+    return {
+      logs: JSON.stringify(
+        task.logs.map((log) => {
+          return {
+            ...log,
+            screenshot: "image-data",
+          };
         }),
       ),
-    }),
-  })
-  .then(async (result) => {
-    console.log("results", JSON.stringify(result, null, 2));
-    await session.end();
-    process.exit(0);
-  });
-
-setInterval(() => {
-  const current = session.get();
-  console.log("session status", current.status);
-  console.log("liveUrl", current.liveUrl);
-  console.log(
-    "session task",
-    current.tasks.map((task) => {
-      return {
-        logs: JSON.stringify(
-          task.logs.map((log) => {
-            return {
-              ...log,
-              screenshot: "image-data",
-            };
-          }),
-        ),
-        result: task.result,
-      };
-    }),
-  );
-}, 5_000);
+      result: task.result,
+    };
+  }),
+);
+process.exit(0);
