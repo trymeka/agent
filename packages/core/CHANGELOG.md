@@ -1,5 +1,11 @@
 # @trymeka/core
 
+## 0.0.7
+
+### Patch Changes
+
+- bcc0ad0: Add persistent memory for important information and update system prompt
+
 ## 0.0.6
 
 ### Patch Changes
