@@ -7,6 +7,7 @@ import {
   createComputerTool,
 } from "../tools/computer";
 import { ComputerProviderError, ToolCallError } from "../tools/errors";
+import { SessionMemoryStore, createMemoryTool } from "../tools/memory";
 import { type Logger, createNoOpLogger } from "../utils/logger";
 import { AIProviderError, AgentError } from "./errors";
 import { SYSTEM_PROMPT } from "./prompts/system";
@@ -66,6 +67,9 @@ export function createAgent(options: {
         const MAX_STEPS = 300;
         const CONVERSATION_LOOK_BACK = 7;
 
+        // Create persistent memory store for this task
+        const memoryStore = new SessionMemoryStore();
+
         const coreTools = {
           computer_action: createComputerTool({
             computerProvider,
@@ -73,6 +77,9 @@ export function createAgent(options: {
           complete_task: createCompleteTaskTool({
             aiProvider,
             outputSchema: task.outputSchema ?? z.string(),
+          }),
+          memory: createMemoryTool({
+            memoryStore,
           }),
         };
         // biome-ignore lint/suspicious/noExplicitAny: user defined
@@ -107,7 +114,29 @@ export function createAgent(options: {
               relevantConversations.unshift([1, task]);
             }
           }
-          return relevantConversations.flatMap(([_, messages]) => messages);
+
+          const messages = relevantConversations.flatMap(
+            ([_, messages]) => messages,
+          );
+
+          // Inject persistent memory context if available
+          const memoryContext = (
+            memoryStore as SessionMemoryStore
+          ).getMemoryContext();
+          if (memoryContext) {
+            // Add memory context as the first user message so it's always visible
+            messages.unshift({
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: memoryContext,
+                },
+              ],
+            });
+          }
+
+          return messages;
         }
 
         const currentSession = sessionMap.get(sessionId);

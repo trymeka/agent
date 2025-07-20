@@ -30,4 +30,8 @@ export {
   type ComputerAction,
   type ComputerActionResult,
 } from "./computer";
+export {
+  createMemoryTool,
+  type MemoryStore,
+} from "./memory";
 export { ToolCallError, ComputerProviderError } from "./errors";
