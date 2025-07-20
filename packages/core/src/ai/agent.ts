@@ -6,8 +6,8 @@ import {
   type ComputerProvider,
   createComputerTool,
 } from "../tools/computer";
-import { createMemoryTool, SessionMemoryStore } from "../tools/memory";
 import { ComputerProviderError, ToolCallError } from "../tools/errors";
+import { SessionMemoryStore, createMemoryTool } from "../tools/memory";
 import { type Logger, createNoOpLogger } from "../utils/logger";
 import { AIProviderError, AgentError } from "./errors";
 import { SYSTEM_PROMPT } from "./prompts/system";
@@ -114,11 +114,15 @@ export function createAgent(options: {
               relevantConversations.unshift([1, task]);
             }
           }
-          
-          const messages = relevantConversations.flatMap(([_, messages]) => messages);
-          
+
+          const messages = relevantConversations.flatMap(
+            ([_, messages]) => messages,
+          );
+
           // Inject persistent memory context if available
-          const memoryContext = (memoryStore as SessionMemoryStore).getMemoryContext();
+          const memoryContext = (
+            memoryStore as SessionMemoryStore
+          ).getMemoryContext();
           if (memoryContext) {
             // Add memory context as the first user message so it's always visible
             messages.unshift({
@@ -131,7 +135,7 @@ export function createAgent(options: {
               ],
             });
           }
-          
+
           return messages;
         }
 

@@ -4,13 +4,19 @@ import type { Tool } from ".";
 const memoryToolSchema = z.object({
   key: z
     .string()
-    .describe("Unique identifier for this piece of information (e.g., 'customer_counts', 'running_total')"),
+    .describe(
+      "Unique identifier for this piece of information (e.g., 'customer_counts', 'running_total')",
+    ),
   data: z
     .string()
-    .describe("Information to store or update. Use structured text or JSON for complex data."),
+    .describe(
+      "Information to store or update. Use structured text or JSON for complex data.",
+    ),
   action: z
     .enum(["store", "update", "retrieve", "delete", "list"])
-    .describe("Memory action: store (new), update (modify existing), retrieve (get), delete (remove), or list (show all keys)"),
+    .describe(
+      "Memory action: store (new), update (modify existing), retrieve (get), delete (remove), or list (show all keys)",
+    ),
 });
 
 export interface MemoryStore {
@@ -50,9 +56,9 @@ export class SessionMemoryStore implements MemoryStore {
     if (this.store.size === 0) {
       return "";
     }
-    
+
     const entries = Array.from(this.store.entries());
-    return `PERSISTENT MEMORY:\n${entries.map(([key, value]) => `${key}: ${value}`).join('\n')}\n`;
+    return `PERSISTENT MEMORY:\n${entries.map(([key, value]) => `${key}: ${value}`).join("\n")}\n`;
   }
 }
 
@@ -62,80 +68,85 @@ export function createMemoryTool({
   memoryStore: MemoryStore;
 }): Tool<typeof memoryToolSchema, { result: string; success: boolean }> {
   return {
-    description: 
+    description:
       "Store, update, retrieve, or manage important information that persists across all steps. Use this to maintain running calculations, accumulated data, intermediate results, and any information you need to remember throughout the entire task.",
     schema: memoryToolSchema,
-    execute: async (args, context) => {
+    execute: (args, _context) => {
       const { key, data, action } = args;
 
       try {
         switch (action) {
           case "store":
             memoryStore.set(key, data);
-            return {
+            return Promise.resolve({
               result: `Stored data under key '${key}'`,
               success: true,
-            };
+            });
 
-          case "update":
+          case "update": {
             const existing = memoryStore.get(key);
             if (existing === undefined) {
               // If key doesn't exist, treat as store
               memoryStore.set(key, data);
-              return {
+              return Promise.resolve({
                 result: `Key '${key}' didn't exist, stored new data`,
                 success: true,
-              };
+              });
             }
             memoryStore.set(key, data);
-            return {
+            return Promise.resolve({
               result: `Updated data for key '${key}'`,
               success: true,
-            };
+            });
+          }
 
-          case "retrieve":
+          case "retrieve": {
             const value = memoryStore.get(key);
             if (value === undefined) {
-              return {
+              return Promise.resolve({
                 result: `No data found for key '${key}'`,
                 success: false,
-              };
+              });
             }
-            return {
+            return Promise.resolve({
               result: `Data for '${key}': ${value}`,
               success: true,
-            };
+            });
+          }
 
-          case "delete":
+          case "delete": {
             const deleted = memoryStore.delete(key);
-            return {
-              result: deleted 
+            return Promise.resolve({
+              result: deleted
                 ? `Deleted data for key '${key}'`
                 : `No data found for key '${key}'`,
               success: deleted,
-            };
+            });
+          }
 
-          case "list":
+          case "list": {
             const keys = memoryStore.list();
-            return {
-              result: keys.length > 0 
-                ? `Stored keys: ${keys.join(", ")}`
-                : "No data stored in memory",
+            return Promise.resolve({
+              result:
+                keys.length > 0
+                  ? `Stored keys: ${keys.join(", ")}`
+                  : "No data stored in memory",
               success: true,
-            };
+            });
+          }
 
           default:
-            return {
+            return Promise.resolve({
               result: `Unknown action: ${action}`,
               success: false,
-            };
+            });
         }
       } catch (error) {
-        return {
+        return Promise.resolve({
           result: `Memory operation failed: ${error instanceof Error ? error.message : String(error)}`,
           success: false,
-        };
+        });
       }
     },
   };
-} 
+}
