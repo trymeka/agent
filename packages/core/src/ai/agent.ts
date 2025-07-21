@@ -15,13 +15,20 @@ import { SYSTEM_PROMPT } from "./prompts/system";
 const sessionIdGenerator = () => `session_${crypto.randomUUID()}`;
 
 export function createAgent(options: {
-  aiProvider: AIProvider;
+  aiProvider:
+    | AIProvider
+    | {
+        ground: AIProvider;
+        evaluator?: AIProvider;
+      };
   computerProvider: ComputerProvider;
   logger?: Logger;
 }) {
-  // Dependencies are destructured and composed.
-  const { aiProvider, computerProvider } = options;
-  const logger = options.logger ?? createNoOpLogger();
+  const { aiProvider, computerProvider, logger: loggerOverride } = options;
+  const { ground, evaluator } =
+    "ground" in aiProvider ? aiProvider : { ground: aiProvider };
+  const logger = loggerOverride ?? createNoOpLogger();
+
   const sessionMap = new Map<
     string,
     {
@@ -75,8 +82,10 @@ export function createAgent(options: {
             computerProvider,
           }),
           complete_task: createCompleteTaskTool({
-            aiProvider,
+            ground,
+            evaluator,
             outputSchema: task.outputSchema ?? z.string(),
+            currentInstruction: task.instructions,
           }),
           memory: createMemoryTool({
             memoryStore,
@@ -120,9 +129,7 @@ export function createAgent(options: {
           );
 
           // Inject persistent memory context if available
-          const memoryContext = (
-            memoryStore as SessionMemoryStore
-          ).getMemoryContext();
+          const memoryContext = memoryStore.getMemoryContext();
           if (memoryContext) {
             // Add memory context as the first user message so it's always visible
             messages.unshift({
@@ -150,7 +157,7 @@ export function createAgent(options: {
           logs: AgentLog[];
         } = {
           instructions: task.instructions,
-          logs: [] as AgentLog[],
+          logs: [],
           result: undefined,
         };
         currentSession.tasks.push(currentTask);
@@ -168,7 +175,7 @@ export function createAgent(options: {
               cause: error,
             });
           });
-        const modelName = await aiProvider.modelName();
+        const modelName = await ground.modelName();
         const firstScreenshot = await computerProvider
           .takeScreenshot(sessionId)
           .catch((error) => {
@@ -217,7 +224,7 @@ export function createAgent(options: {
           });
 
           // Generate model response
-          const response = await aiProvider
+          const response = await ground
             .generateText({
               systemPrompt: SYSTEM_PROMPT({
                 screenSize,
