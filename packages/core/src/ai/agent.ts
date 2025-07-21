@@ -76,12 +76,9 @@ function getActivePage(browser: unknown): string | undefined {
 async function generatePlanningData(
   aiProvider: AIProvider,
   messages: AgentMessage[],
-  memoryStore: SessionMemoryStore,
   step: number,
+  previousStepGoal?: string,
 ): Promise<PlanningData> {
-  // Get previous step goal from memory
-  const previousStepGoal = memoryStore.get("current_step_goal");
-
   const planningSchema =
     step === 1
       ? z.object({
@@ -153,9 +150,6 @@ Current step: ${step}`;
       ],
     });
 
-    // Store next step goal for use in following step
-    memoryStore.set("current_step_goal", result.object.nextStepGoal);
-
     // Handle different response shapes based on step
     if (step === 1) {
       return {
@@ -180,7 +174,6 @@ Current step: ${step}`;
     console.log("Planning generation failed", _error);
     // Fallback to basic planning if generateObject fails
     const fallbackGoal = "Continue with the task";
-    memoryStore.set("current_step_goal", fallbackGoal);
 
     if (step === 1) {
       return {
@@ -277,6 +270,7 @@ export function createAgent(options: {
 
         const conversationHistory: AgentMessage[] = [];
         const conversationChunk = new Map<number, AgentMessage[]>();
+        let currentStepGoal: string | undefined;
         function buildMessageInput(step: number, messages: AgentMessage[]) {
           conversationHistory.push(...messages);
           const chunk = conversationChunk.get(step);
@@ -298,7 +292,13 @@ export function createAgent(options: {
           if (step > CONVERSATION_LOOK_BACK) {
             const task = conversationChunk.get(1);
             if (task) {
-              relevantConversations.unshift([1, task]);
+              // Only preserve the initial user task message, not assistant responses/planning from Step 1
+              const initialTaskMessage = task.filter(
+                (msg) => msg.role === "user",
+              );
+              if (initialTaskMessage.length > 0) {
+                relevantConversations.unshift([1, initialTaskMessage]);
+              }
             }
           }
 
@@ -452,9 +452,12 @@ export function createAgent(options: {
           const planningData = await generatePlanningData(
             aiProvider,
             messages,
-            memoryStore as SessionMemoryStore,
             step,
+            currentStepGoal,
           );
+
+          // Update current step goal for next iteration
+          currentStepGoal = planningData.nextStepGoal;
 
           logger.info("[Agent] Generated planning data", {
             step,
