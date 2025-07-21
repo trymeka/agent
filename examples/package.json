@@ -21,6 +21,7 @@
     "@trymeka/ai-provider-vercel": "workspace:*",
     "@trymeka/computer-provider-scrapybara": "workspace:*",
     "@trymeka/core": "workspace:*",
+    "openai": "^5.10.1",
     "zod": "^3.24.4"
   },
   "devDependencies": {
