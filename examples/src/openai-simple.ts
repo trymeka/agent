@@ -30,7 +30,7 @@ const agent = createAgent({
 const session = await agent.initializeSession();
 const result = await session.runTask({
   instructions:
-    "Find the email address and phone number for the various practices in the location list.",
+    "Find 10 phone numbers for the various practices in the location list on this page.",
   outputSchema: z.object({
     locations: z.array(
       z.object({
