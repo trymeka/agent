@@ -36,11 +36,30 @@ export interface AgentLog {
   step: number;
   timestamp: string;
   modelOutput: {
-    done: {
-      type: "text";
-      text: string;
-      reasoning?: string;
-    };
+    done: (
+      | {
+          type: "text";
+          text: string;
+          reasoning?: string;
+        }
+      | {
+          type: "tool_call";
+          toolCallId: string;
+          toolName: string;
+          args: unknown;
+          screenshot?: string;
+          reasoning?: string;
+          result:
+            | {
+                type: "completion";
+                output: unknown;
+              }
+            | {
+                type: "response";
+                response: UserMessage;
+              };
+        }
+    )[];
   };
   usage: {
     model: string;

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { Tool } from ".";
 import type { AIProvider, UserMessage } from "../ai";
+import { createAgentLogUpdate } from "../utils/agent-log";
 
 const completeTaskSchema = z.object({
   completionSummary: z
@@ -30,7 +31,7 @@ export function createCompleteTaskTool<T extends z.ZodSchema>({
   evaluator: AIProvider | undefined;
   outputSchema: T;
   currentInstruction: string;
-}): Tool<typeof completeTaskSchema, { output: z.infer<T> }> {
+}): Tool<typeof completeTaskSchema, z.infer<T>> {
   return {
     description:
       "Declare that the task is complete. This tool MUST be used to officially end the task. The task cannot be completed without calling this tool.",
@@ -94,10 +95,27 @@ Respond with either an APPROVED or REFLECTION object based on your evaluation. F
 
         // If evaluation indicates issues, provide reflection
         if (evaluationResult.object.type === "REFLECTION") {
-          const reflection = evaluationResult.object.reflectionForImprovement;
-          throw new Error(
-            `Task completion requires reflection and improvement: ${reflection}`,
-          );
+          const rejectionText = `This task was determined to be incomplete. The reason is: ${evaluationResult.object.reason}. Please improve the task completion based on the following feedback: ${evaluationResult.object.reflectionForImprovement}`;
+          const response = {
+            role: "user" as const,
+            content: [
+              {
+                type: "text" as const,
+                text: rejectionText,
+              },
+            ],
+          };
+          return {
+            type: "response",
+            response,
+            updateCurrentAgentLog: createAgentLogUpdate({
+              toolCallId: context.toolCallId,
+              toolName: "complete_task",
+              args,
+              reasoning: evaluationResult.object.reason,
+              response,
+            }),
+          };
         }
       }
 
@@ -118,7 +136,7 @@ Respond with either an APPROVED or REFLECTION object based on your evaluation. F
         messages: fullHistory,
         schema: outputSchema,
       });
-      return { output: result.object };
+      return { type: "completion", output: result.object };
     },
   };
 }

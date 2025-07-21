@@ -1,5 +1,6 @@
 import z from "zod";
 import type { Tool } from ".";
+import { createAgentLogUpdate } from "../utils/agent-log";
 
 export const parseComputerToolArgs = (args: string) => {
   const parsedArgs = (() => {
@@ -194,11 +195,33 @@ export function createComputerTool({
         sessionId: context.sessionId,
         step: context.step,
       });
+      const response = {
+        role: "user" as const,
+        content: [
+          {
+            type: "text" as const,
+            text: `Computer action on ${result.timestamp}, result: ${result.actionPerformed}. Reasoning: ${result.reasoning} Screenshot as attached.`,
+          },
+          {
+            type: "image" as const,
+            image: screenshotUrl?.url ? new URL(screenshotUrl.url) : screenshot,
+          },
+        ],
+      };
       return {
-        ...result,
-        screenshot: screenshotUrl?.url
-          ? new URL(screenshotUrl.url)
-          : screenshot,
+        type: "response",
+        response,
+        updateCurrentAgentLog: createAgentLogUpdate({
+          toolCallId: context.toolCallId,
+          toolName: "computer_action",
+          args,
+          reasoning: result.reasoning,
+          screenshot: {
+            value: screenshotUrl?.url ?? screenshot,
+            overrideLogScreenshot: true,
+          },
+          response,
+        }),
       };
     },
   };
