@@ -277,6 +277,7 @@ export function createAgent(options: {
             screenshot: "",
             step,
             timestamp: new Date().toISOString(),
+            currentUrl: await computerProvider.getCurrentUrl(sessionId),
             modelOutput: {
               done: [
                 {

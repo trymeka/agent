@@ -112,7 +112,18 @@ export function createScrapybaraComputerProvider(options: {
     uploadScreenshot: options.uploadScreenshot
       ? options.uploadScreenshot
       : undefined,
-
+    async getCurrentUrl(sessionId: string) {
+      const result = sessionMap.get(sessionId);
+      if (!result) {
+        throw new ComputerProviderError(
+          `No instance found for sessionId ${sessionId}`,
+        );
+      }
+      const cdpUrl = (await result.instance.getCdpUrl()).cdpUrl;
+      const browser = await chromium.connectOverCDP(cdpUrl);
+      const page = getPage(browser, "Scrapybara");
+      return page.url();
+    },
     async start(sessionId: string) {
       logger.info("[ComputerProvider] Starting up scrapybara instance");
       const instance = await scrapybaraClient.startBrowser({

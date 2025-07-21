@@ -35,6 +35,7 @@ export interface AgentLog {
   screenshot: string;
   step: number;
   timestamp: string;
+  currentUrl?: string;
   modelOutput: {
     done: (
       | {

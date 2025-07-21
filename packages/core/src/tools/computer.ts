@@ -133,6 +133,8 @@ export interface ComputerActionResult {
   timestamp: string;
 }
 export interface ComputerProvider {
+  getCurrentUrl(sessionId: string): Promise<string>;
+
   /** Takes a screenshot of the environment. */
   takeScreenshot(sessionId: string): Promise<string>; // Returns base64 image string
 
@@ -180,11 +182,16 @@ export function createComputerTool({
 }): Tool<
   typeof computerToolSchema,
   ComputerActionResult & { screenshot: string | URL }
-> {
+> & {
+  getCurrentUrl: (context: { sessionId: string }) => Promise<string>;
+} {
   return {
     description:
       "Execute a computer action like clicking, dragging, typing, scrolling, etc. Use this for ALL interactions with the screen.",
     schema: computerToolSchema,
+    getCurrentUrl: (context) => {
+      return computerProvider.getCurrentUrl(context.sessionId);
+    },
     execute: async (args, context) => {
       const result = await computerProvider.performAction(args.action, context);
       const screenshot = await computerProvider.takeScreenshot(
