@@ -72,127 +72,6 @@ function getActivePage(browser: unknown): string | undefined {
   }
 }
 
-// Generate structured planning data using generateObject
-async function generatePlanningData(
-  aiProvider: AIProvider,
-  messages: AgentMessage[],
-  step: number,
-  previousStepGoal?: string,
-): Promise<PlanningData> {
-  const planningSchema =
-    step === 1
-      ? z.object({
-          currentStepReasoning: z
-            .string()
-            .describe(
-              "Analyze the current situation. What do you see? What's the current state? What needs to be done?",
-            ),
-          nextStepGoal: z
-            .string()
-            .describe(
-              "Set a specific, actionable goal for the next step. What exactly do you plan to accomplish next?",
-            ),
-        })
-      : z.object({
-          previousStepGoal: z
-            .string()
-            .describe("The goal that was set for the previous step"),
-          previousStepEvaluation: z
-            .string()
-            .describe(
-              "Evaluate if the previous step achieved its goal. What worked? What didn't work? Was it successful?",
-            ),
-          currentStepReasoning: z
-            .string()
-            .describe(
-              "Analyze the current situation. What do you see? What's the current state? What needs to be done?",
-            ),
-          nextStepGoal: z
-            .string()
-            .describe(
-              "Set a specific, actionable goal for the next step. What exactly do you plan to accomplish next?",
-            ),
-        });
-
-  // Create planning prompt
-  let planningPrompt = `Based on the conversation and current task progress, provide structured planning information.
-
-Current step: ${step}`;
-
-  if (step > 1) {
-    planningPrompt += `\nPrevious step goal was: "${previousStepGoal || "Unknown"}"`;
-    planningPrompt += "\n\nFor your response:";
-    planningPrompt += `\n- previousStepGoal: "${previousStepGoal || "Unknown"}"`;
-    planningPrompt +=
-      "\n- previousStepEvaluation: Evaluate if the previous step achieved its goal";
-    planningPrompt += "\n- currentStepReasoning: Analyze the current situation";
-    planningPrompt += "\n- nextStepGoal: Set a specific goal for the next step";
-  } else {
-    planningPrompt += "\n\nFor your response:";
-    planningPrompt += "\n- currentStepReasoning: Analyze the current situation";
-    planningPrompt += "\n- nextStepGoal: Set a specific goal for the next step";
-  }
-
-  try {
-    const result = await aiProvider.generateObject({
-      schema: planningSchema,
-      messages: [
-        ...messages,
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: planningPrompt,
-            },
-          ],
-        },
-      ],
-    });
-
-    // Handle different response shapes based on step
-    if (step === 1) {
-      return {
-        currentStepReasoning: result.object.currentStepReasoning,
-        nextStepGoal: result.object.nextStepGoal,
-      };
-    }
-
-    const stepResult = result.object as {
-      previousStepGoal: string;
-      previousStepEvaluation: string;
-      currentStepReasoning: string;
-      nextStepGoal: string;
-    };
-    return {
-      previousStepGoal: stepResult.previousStepGoal,
-      previousStepEvaluation: stepResult.previousStepEvaluation,
-      currentStepReasoning: stepResult.currentStepReasoning,
-      nextStepGoal: stepResult.nextStepGoal,
-    };
-  } catch (_error) {
-    console.log("Planning generation failed", _error);
-    // Fallback to basic planning if generateObject fails
-    const fallbackGoal = "Continue with the task";
-
-    if (step === 1) {
-      return {
-        currentStepReasoning:
-          "Planning generation failed - proceeding with basic reasoning",
-        nextStepGoal: fallbackGoal,
-      };
-    }
-
-    return {
-      previousStepGoal: previousStepGoal || "Unknown",
-      previousStepEvaluation: "Unable to evaluate due to planning failure",
-      currentStepReasoning:
-        "Planning generation failed - proceeding with basic reasoning",
-      nextStepGoal: fallbackGoal,
-    };
-  }
-}
-
 export function createAgent(options: {
   aiProvider: AIProvider;
   computerProvider: ComputerProvider;
@@ -270,7 +149,6 @@ export function createAgent(options: {
 
         const conversationHistory: AgentMessage[] = [];
         const conversationChunk = new Map<number, AgentMessage[]>();
-        let currentStepGoal: string | undefined;
         function buildMessageInput(step: number, messages: AgentMessage[]) {
           conversationHistory.push(...messages);
           const chunk = conversationChunk.get(step);
@@ -448,46 +326,8 @@ export function createAgent(options: {
             currentUrl = getActivePage(currentSession.browser);
           }
 
-          // Generate planning data after main response
-          const planningData = await generatePlanningData(
-            aiProvider,
-            messages,
-            step,
-            currentStepGoal,
-          );
-
-          // Update current step goal for next iteration
-          currentStepGoal = planningData.nextStepGoal;
-
-          logger.info("[Agent] Generated planning data", {
-            step,
-            currentUrl,
-            planning: planningData,
-          });
-
-          // Add planning data to conversation history for next iteration
-          const planningMessage =
-            step === 1
-              ? `[PLANNING - Step ${step}]
-Current Analysis: ${planningData.currentStepReasoning}
-Next Goal: ${planningData.nextStepGoal || "Continue with task"}`
-              : `[PLANNING - Step ${step}]
-Previous Goal: ${planningData.previousStepGoal || "Unknown"}
-Previous Evaluation: ${planningData.previousStepEvaluation || "No evaluation"}
-Current Analysis: ${planningData.currentStepReasoning}
-Next Goal: ${planningData.nextStepGoal || "Continue with task"}`;
-
-          buildMessageInput(step, [
-            {
-              role: "assistant",
-              content: [
-                {
-                  type: "text",
-                  text: planningMessage,
-                },
-              ],
-            },
-          ]);
+          // Planning data will be extracted from computer actions
+          let planningData: PlanningData | undefined;
 
           if (response.toolCalls.length === 0) {
             logger.info(
@@ -525,7 +365,7 @@ Next Goal: ${planningData.nextStepGoal || "Continue with task"}`;
               outputTokensStep: response.usage?.completionTokens,
               totalTokensStep: response.usage?.totalTokens,
             },
-            planning: planningData,
+            ...(planningData ? { planning: planningData } : {}),
           };
 
           // Process tool calls
@@ -601,10 +441,40 @@ Next Goal: ${planningData.nextStepGoal || "Continue with task"}`;
             if (toolCall.toolName === "computer_action") {
               const computerActionResult = result as ComputerActionResult & {
                 screenshot: string | URL;
+                previousStepEvaluation: string;
+                currentStepReasoning: string;
+                nextStepGoal: string;
               };
               agentLog.screenshot = computerActionResult.screenshot.toString();
               agentLog.modelOutput.done.reasoning =
                 computerActionResult.reasoning;
+
+              // Extract planning data from computer action
+              planningData = {
+                previousStepEvaluation:
+                  computerActionResult.previousStepEvaluation,
+                currentStepReasoning: computerActionResult.currentStepReasoning,
+                nextStepGoal: computerActionResult.nextStepGoal,
+              };
+
+              // Add planning data to conversation history
+              const planningMessage = `[PLANNING - Step ${step}]
+Previous Step Evaluation: ${computerActionResult.previousStepEvaluation}
+Current Step Reasoning: ${computerActionResult.currentStepReasoning}
+Next Step Goal: ${computerActionResult.nextStepGoal}`;
+
+              buildMessageInput(step, [
+                {
+                  role: "assistant",
+                  content: [
+                    {
+                      type: "text",
+                      text: planningMessage,
+                    },
+                  ],
+                },
+              ]);
+
               buildMessageInput(step + 1, [
                 {
                   role: "user",

@@ -182,6 +182,21 @@ const computerToolSchema = z.object({
     .describe(
       "The reasoning for performing the action. Make sure you provide a clear and concise reasoning for the action so that users can understand what you are doing.",
     ),
+  previousStepEvaluation: z
+    .string()
+    .describe(
+      "Previous step evaluation: Did you achieve the goal you set? What worked? What didn't work? (Use 'Starting task' for first step)",
+    ),
+  currentStepReasoning: z
+    .string()
+    .describe(
+      "Current step reasoning: What do you see? What's the current state? What needs to be done?",
+    ),
+  nextStepGoal: z
+    .string()
+    .describe(
+      "Next step goal: What specific, actionable goal do you plan to accomplish next?",
+    ),
 });
 export function createComputerTool({
   computerProvider,
@@ -189,7 +204,12 @@ export function createComputerTool({
   computerProvider: ComputerProvider;
 }): Tool<
   typeof computerToolSchema,
-  ComputerActionResult & { screenshot: string | URL }
+  ComputerActionResult & {
+    screenshot: string | URL;
+    previousStepEvaluation: string;
+    currentStepReasoning: string;
+    nextStepGoal: string;
+  }
 > {
   return {
     description:
@@ -210,6 +230,9 @@ export function createComputerTool({
         screenshot: screenshotUrl?.url
           ? new URL(screenshotUrl.url)
           : screenshot,
+        previousStepEvaluation: args.previousStepEvaluation,
+        currentStepReasoning: args.currentStepReasoning,
+        nextStepGoal: args.nextStepGoal,
       };
     },
   };
