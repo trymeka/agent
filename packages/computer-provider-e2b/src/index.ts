@@ -58,7 +58,7 @@ export function createE2BComputerProvider(options: {
     step: number;
   }) => Promise<{ url: string }>;
   screenSize?: { width: number; height: number };
-  initialApplications?: string[];
+  initialUrl?: string;
   logger?: Logger;
 }): ComputerProvider {
   const logger = options.logger ?? createNoOpLogger();
@@ -106,15 +106,18 @@ export function createE2BComputerProvider(options: {
       logger.info("[ComputerProvider] E2B sandbox started", { sessionId });
 
       // Launch initial applications if specified
-      if (options.initialApplications?.length) {
-        for (const app of options.initialApplications) {
-          try {
-            await sandbox.launch(app);
-            logger.info(`[ComputerProvider] Launched application: ${app}`);
-            await sandbox.wait(2000); // Wait for app to start
-          } catch (error) {
-            logger.warn(`[ComputerProvider] Failed to launch ${app}:`, error);
-          }
+      if (options.initialUrl) {
+        try {
+          await sandbox.launch(options.initialUrl);
+          logger.info(
+            `[ComputerProvider] Launched application: ${options.initialUrl}`,
+          );
+          await sandbox.wait(2000); // Wait for app to start
+        } catch (error) {
+          logger.warn(
+            `[ComputerProvider] Failed to launch ${options.initialUrl}:`,
+            error,
+          );
         }
       }
       const liveUrl = sandbox.stream.getUrl();
