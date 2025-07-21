@@ -1,7 +1,8 @@
 import { z } from "zod";
-import type { AIProvider, AgentLog, AgentMessage } from ".";
+import type { AIProvider, AgentLog, AgentMessage, PlanningData } from ".";
 import { type Tool, createCompleteTaskTool } from "../tools";
 import {
+  type BrowserInstance,
   type ComputerActionResult,
   type ComputerProvider,
   createComputerTool,
@@ -13,6 +14,191 @@ import { AIProviderError, AgentError } from "./errors";
 import { SYSTEM_PROMPT } from "./prompts/system";
 
 const sessionIdGenerator = () => `session_${crypto.randomUUID()}`;
+
+function getActivePage(browser: unknown): string | undefined {
+  try {
+    if (!browser || typeof browser !== "object") return undefined;
+
+    // Type guard for Playwright Browser-like object
+    const browserInstance = browser as BrowserInstance;
+    if (
+      !browserInstance.contexts ||
+      typeof browserInstance.contexts !== "function"
+    ) {
+      return undefined;
+    }
+
+    const contexts = browserInstance.contexts();
+    if (!Array.isArray(contexts) || contexts.length === 0) {
+      return undefined;
+    }
+
+    // Iterate through all contexts to find the best page
+    for (const context of contexts) {
+      if (!context.pages || typeof context.pages !== "function") continue;
+
+      const pages = context.pages();
+      if (!Array.isArray(pages)) continue;
+
+      // Look for first non-blank page
+      const nonBlankPage = pages.find((p) => {
+        try {
+          return (
+            p?.url && typeof p.url === "function" && p.url() !== "about:blank"
+          );
+        } catch {
+          return false;
+        }
+      });
+
+      if (nonBlankPage?.url && typeof nonBlankPage.url === "function") {
+        return nonBlankPage.url();
+      }
+
+      // Fallback to first page if no non-blank page found
+      if (
+        pages.length > 0 &&
+        pages[0] &&
+        pages[0].url &&
+        typeof pages[0].url === "function"
+      ) {
+        return pages[0].url();
+      }
+    }
+
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+// Generate structured planning data using generateObject
+async function generatePlanningData(
+  aiProvider: AIProvider,
+  messages: AgentMessage[],
+  memoryStore: SessionMemoryStore,
+  step: number,
+): Promise<PlanningData> {
+  // Get previous step goal from memory
+  const previousStepGoal = memoryStore.get("current_step_goal");
+
+  const planningSchema =
+    step === 1
+      ? z.object({
+          currentStepReasoning: z
+            .string()
+            .describe(
+              "Analyze the current situation. What do you see? What's the current state? What needs to be done?",
+            ),
+          nextStepGoal: z
+            .string()
+            .describe(
+              "Set a specific, actionable goal for the next step. What exactly do you plan to accomplish next?",
+            ),
+        })
+      : z.object({
+          previousStepGoal: z
+            .string()
+            .describe("The goal that was set for the previous step"),
+          previousStepEvaluation: z
+            .string()
+            .describe(
+              "Evaluate if the previous step achieved its goal. What worked? What didn't work? Was it successful?",
+            ),
+          currentStepReasoning: z
+            .string()
+            .describe(
+              "Analyze the current situation. What do you see? What's the current state? What needs to be done?",
+            ),
+          nextStepGoal: z
+            .string()
+            .describe(
+              "Set a specific, actionable goal for the next step. What exactly do you plan to accomplish next?",
+            ),
+        });
+
+  // Create planning prompt
+  let planningPrompt = `Based on the conversation and current task progress, provide structured planning information.
+
+Current step: ${step}`;
+
+  if (step > 1) {
+    planningPrompt += `\nPrevious step goal was: "${previousStepGoal || "Unknown"}"`;
+    planningPrompt += "\n\nFor your response:";
+    planningPrompt += `\n- previousStepGoal: "${previousStepGoal || "Unknown"}"`;
+    planningPrompt +=
+      "\n- previousStepEvaluation: Evaluate if the previous step achieved its goal";
+    planningPrompt += "\n- currentStepReasoning: Analyze the current situation";
+    planningPrompt += "\n- nextStepGoal: Set a specific goal for the next step";
+  } else {
+    planningPrompt += "\n\nFor your response:";
+    planningPrompt += "\n- currentStepReasoning: Analyze the current situation";
+    planningPrompt += "\n- nextStepGoal: Set a specific goal for the next step";
+  }
+
+  try {
+    const result = await aiProvider.generateObject({
+      schema: planningSchema,
+      messages: [
+        ...messages,
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: planningPrompt,
+            },
+          ],
+        },
+      ],
+    });
+
+    // Store next step goal for use in following step
+    memoryStore.set("current_step_goal", result.object.nextStepGoal);
+
+    // Handle different response shapes based on step
+    if (step === 1) {
+      return {
+        currentStepReasoning: result.object.currentStepReasoning,
+        nextStepGoal: result.object.nextStepGoal,
+      };
+    }
+
+    const stepResult = result.object as {
+      previousStepGoal: string;
+      previousStepEvaluation: string;
+      currentStepReasoning: string;
+      nextStepGoal: string;
+    };
+    return {
+      previousStepGoal: stepResult.previousStepGoal,
+      previousStepEvaluation: stepResult.previousStepEvaluation,
+      currentStepReasoning: stepResult.currentStepReasoning,
+      nextStepGoal: stepResult.nextStepGoal,
+    };
+  } catch (_error) {
+    console.log("Planning generation failed", _error);
+    // Fallback to basic planning if generateObject fails
+    const fallbackGoal = "Continue with the task";
+    memoryStore.set("current_step_goal", fallbackGoal);
+
+    if (step === 1) {
+      return {
+        currentStepReasoning:
+          "Planning generation failed - proceeding with basic reasoning",
+        nextStepGoal: fallbackGoal,
+      };
+    }
+
+    return {
+      previousStepGoal: previousStepGoal || "Unknown",
+      previousStepEvaluation: "Unable to evaluate due to planning failure",
+      currentStepReasoning:
+        "Planning generation failed - proceeding with basic reasoning",
+      nextStepGoal: fallbackGoal,
+    };
+  }
+}
 
 export function createAgent(options: {
   aiProvider: AIProvider;
@@ -28,6 +214,7 @@ export function createAgent(options: {
       id: string;
       liveUrl: string;
       status: "queued" | "running" | "idle" | "stopped";
+      browser?: unknown;
       tasks: {
         instructions: string;
         result: unknown;
@@ -254,6 +441,51 @@ export function createAgent(options: {
             ]);
           }
 
+          // Get current URL if browser is available
+          const currentSession = sessionMap.get(sessionId);
+          let currentUrl: string | undefined;
+          if (currentSession?.browser) {
+            currentUrl = getActivePage(currentSession.browser);
+          }
+
+          // Generate planning data after main response
+          const planningData = await generatePlanningData(
+            aiProvider,
+            messages,
+            memoryStore as SessionMemoryStore,
+            step,
+          );
+
+          logger.info("[Agent] Generated planning data", {
+            step,
+            currentUrl,
+            planning: planningData,
+          });
+
+          // Add planning data to conversation history for next iteration
+          const planningMessage =
+            step === 1
+              ? `[PLANNING - Step ${step}]
+Current Analysis: ${planningData.currentStepReasoning}
+Next Goal: ${planningData.nextStepGoal || "Continue with task"}`
+              : `[PLANNING - Step ${step}]
+Previous Goal: ${planningData.previousStepGoal || "Unknown"}
+Previous Evaluation: ${planningData.previousStepEvaluation || "No evaluation"}
+Current Analysis: ${planningData.currentStepReasoning}
+Next Goal: ${planningData.nextStepGoal || "Continue with task"}`;
+
+          buildMessageInput(step, [
+            {
+              role: "assistant",
+              content: [
+                {
+                  type: "text",
+                  text: planningMessage,
+                },
+              ],
+            },
+          ]);
+
           if (response.toolCalls.length === 0) {
             logger.info(
               "[Agent] No tool calls in response, prompting for continuation",
@@ -276,6 +508,7 @@ export function createAgent(options: {
             screenshot: "",
             step: step,
             timestamp: new Date().toISOString(),
+            ...(currentUrl ? { currentUrl } : {}),
             modelOutput: {
               done: {
                 type: "text",
@@ -289,6 +522,7 @@ export function createAgent(options: {
               outputTokensStep: response.usage?.completionTokens,
               totalTokensStep: response.usage?.totalTokens,
             },
+            planning: planningData,
           };
 
           // Process tool calls
@@ -354,7 +588,9 @@ export function createAgent(options: {
             // If the tool is `complete_task`, we should return the result and stop the agent.
             if (toolCall.toolName === "complete_task") {
               currentTask.result = result.output;
-              currentSession.status = "idle";
+              if (currentSession) {
+                currentSession.status = "idle";
+              }
               return { result: result.output };
             }
 
@@ -426,7 +662,7 @@ export function createAgent(options: {
         tasks: [],
         status: "queued",
       });
-      const { liveUrl } = await computerProvider
+      const { liveUrl, browser } = await computerProvider
         .start(sessionId)
         .catch((error) => {
           throw new ComputerProviderError("Failed to start computer provider", {
@@ -436,6 +672,7 @@ export function createAgent(options: {
       sessionMap.set(sessionId, {
         id: sessionId,
         liveUrl: liveUrl ?? "",
+        ...(browser ? { browser } : {}),
         tasks: [],
         status: "idle",
       });

@@ -1,6 +1,16 @@
 import z from "zod";
 import type { Tool } from ".";
 
+// Generic browser instance type (e.g., Playwright Browser)
+// This avoids importing specific browser libraries in the core package
+export type BrowserInstance = {
+  contexts(): Array<{
+    pages(): Array<{
+      url(): string;
+    }>;
+  }>;
+};
+
 export const parseComputerToolArgs = (args: string) => {
   const parsedArgs = (() => {
     try {
@@ -158,6 +168,7 @@ export interface ComputerProvider {
   start(sessionId: string): Promise<{
     computerProviderId: string;
     liveUrl?: string;
+    browser?: BrowserInstance; // Optional browser instance for providers that support it (e.g., Playwright Browser)
   }>;
   stop(sessionId: string): Promise<void>;
 

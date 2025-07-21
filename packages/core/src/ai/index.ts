@@ -31,10 +31,18 @@ export interface AssistantMessage {
 }
 
 export type AgentMessage = UserMessage | AssistantMessage;
+export interface PlanningData {
+  previousStepGoal?: string;
+  previousStepEvaluation?: string;
+  currentStepReasoning: string;
+  nextStepGoal?: string;
+}
+
 export interface AgentLog {
   screenshot: string;
   step: number;
   timestamp: string;
+  currentUrl?: string;
   modelOutput: {
     done: {
       type: "text";
@@ -48,6 +56,7 @@ export interface AgentLog {
     outputTokensStep?: number | undefined;
     totalTokensStep?: number | undefined;
   };
+  planning: PlanningData;
 }
 /**
  * The result of a `generateText` call.
