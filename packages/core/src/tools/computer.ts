@@ -135,6 +135,8 @@ export interface ComputerProvider {
   /** Takes a screenshot of the environment. */
   takeScreenshot(sessionId: string): Promise<string>; // Returns base64 image string
 
+  getCurrentUrl(sessionId: string): Promise<string | undefined>;
+
   /** Uploads a screenshot and returns its public URL. */
   uploadScreenshot:
     | ((options: {
