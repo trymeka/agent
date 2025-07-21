@@ -14,7 +14,7 @@ Meka Agent is a framework for building, running, and deploying autonomous Comput
 To get started with Meka, install the various providers
 
 ```bash
-npm install @trymeka/core @trymeka/ai-provider-vercel @ai-sdk/openai @trymeka/computer-provider-scrapybara playwright-core
+npm install @trymeka/core @trymeka/ai-provider-vercel @ai-sdk/openai @trymeka/computer-provider-e2b playwright-core
 ```
 
 Grab API keys from OpenAI and scrapybara, the computer provider.
@@ -27,8 +27,8 @@ const aiProvider = createVercelAIProvider({
     apiKey: process.env.OPENAI_API_KEY,
   })("o3"),
 });
-const computerProvider = createScrapybaraComputerProvider({
-  apiKey: process.env.SCRAPYBARA_API_KEY,
+const computerProvider = createE2BComputerProvider({
+  apiKey: process.env.E2B_API_KEY,
   initialUrl: "https://www.guardiandentistry.com/our-network",
 });
 
