@@ -227,7 +227,19 @@ export function createComputerTool({
             value: screenshotUrl?.url ?? screenshot,
             overrideLogScreenshot: true,
           },
-          response,
+          response: {
+            role: "user",
+            content: response.content.map((c) => {
+              if (c.type === "text") {
+                return c;
+              }
+              return {
+                type: "image",
+                image:
+                  screenshotUrl?.url ?? "[screenshot removed to preserve size]",
+              };
+            }),
+          },
         }),
       };
     },
