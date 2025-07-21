@@ -15,13 +15,14 @@ export function createAgent(options: {
     | AIProvider
     | {
         ground: AIProvider;
+        alternateGround?: AIProvider;
         evaluator?: AIProvider;
       };
   computerProvider: ComputerProvider;
   logger?: Logger;
 }) {
   const { aiProvider, computerProvider, logger: loggerOverride } = options;
-  const { ground, evaluator } =
+  const { ground, evaluator, alternateGround } =
     "ground" in aiProvider ? aiProvider : { ground: aiProvider };
   const logger = loggerOverride ?? createNoOpLogger();
 
@@ -142,6 +143,23 @@ export function createAgent(options: {
           return messages;
         }
 
+        const groundModelName = await ground.modelName();
+        const alternateModelName = await alternateGround?.modelName();
+        const getCurrentModel = (step: number) => {
+          // If no alternateGround, always use ground
+          if (!alternateGround) {
+            return { model: groundModelName, provider: ground };
+          }
+          // Alternate between models: odd steps use ground, even steps use alternateGround
+          return step % 2 === 1
+            ? { model: groundModelName, provider: ground }
+            : // cast is okay because we know alternateGround is defined
+              {
+                model: alternateModelName as string,
+                provider: alternateGround,
+              };
+        };
+
         const currentSession = sessionMap.get(sessionId);
         if (!currentSession) {
           throw new AgentError(`Session not found for sessionId: ${sessionId}`);
@@ -171,7 +189,6 @@ export function createAgent(options: {
               cause: error,
             });
           });
-        const modelName = await ground.modelName();
         const firstScreenshot = await computerProvider
           .takeScreenshot(sessionId)
           .catch((error) => {
@@ -220,7 +237,8 @@ export function createAgent(options: {
           });
 
           // Generate model response
-          const response = await ground
+          const currentModel = getCurrentModel(step);
+          const response = await currentModel.provider
             .generateText({
               systemPrompt: SYSTEM_PROMPT({
                 screenSize,
@@ -288,7 +306,7 @@ export function createAgent(options: {
               ],
             },
             usage: {
-              model: modelName,
+              model: currentModel.model,
               inputTokensStep: response.usage?.promptTokens,
               outputTokensStep: response.usage?.completionTokens,
               totalTokensStep: response.usage?.totalTokens,
