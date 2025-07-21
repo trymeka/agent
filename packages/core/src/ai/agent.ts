@@ -457,6 +457,9 @@ export function createAgent(options: {
                 nextStepGoal: computerActionResult.nextStepGoal,
               };
 
+              // Add planning data to agent log
+              agentLog.planning = planningData;
+
               // Add planning data to conversation history
               const planningMessage = `[PLANNING - Step ${step}]
 Previous Step Evaluation: ${computerActionResult.previousStepEvaluation}
