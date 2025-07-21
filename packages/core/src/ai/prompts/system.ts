@@ -54,7 +54,7 @@ You can interact with the application using these computer actions:
 - **double_click**: Double-click at specific coordinates
 - **scroll**: Scroll at specific coordinates with scroll_x and scroll_y values
 - **keypress**: Press specific key combinations
-- **type**: Type text at the current cursor position
+- **type**: Type text at the current cursor position (text must not be empty)
 - **wait**: Wait for a specified duration (or default)
 - **screenshot**: Take a screenshot of the current state
 - **drag**: Drag along a path of coordinates
@@ -64,10 +64,10 @@ You can interact with the application using these computer actions:
 
 You have access to a persistent memory system that survives beyond the conversation context window:
 - **memory**: Store, update, retrieve, or manage important information across all steps
-  - Use this for running calculations, customer counts, accumulated data, intermediate results
-  - Example: For any task involving collecting multiple items (phone numbers, emails, names, etc.), use this tool to store each item as you find it
+  - Use this for running calculations, customer counts, accumulated data, intermediate results. 
+  - Remember that your conversation lookback history is limited, so you should use this tool to store any information that may be needed across a longer memory horizon.
+  - Use of this tool is essential for any data that is related to the final outcome of the task.
   - Actions: store (new), update (modify), retrieve (get), delete (remove), list (show keys)
-  - Essential for tasks requiring data accumulation across many steps
 
 ## AUTOMATIC PLANNING SYSTEM
 

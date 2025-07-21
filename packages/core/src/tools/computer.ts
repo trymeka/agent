@@ -111,9 +111,9 @@ const scrollActionSchema = z
 const typeActionSchema = z
   .object({
     type: z.literal("type").describe("Type of action to perform"),
-    text: z.string().describe("Text to type"),
+    text: z.string().min(1, "Text cannot be empty").describe("Text to type"),
   })
-  .describe("Type a certain text. Text MUST BE non-empty..");
+  .describe("Type a certain text. Text MUST BE non-empty.");
 
 const waitActionSchema = z
   .object({
