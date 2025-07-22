@@ -69,8 +69,9 @@ export function createAgent(options: {
         outputSchema?: T;
         // biome-ignore lint/suspicious/noExplicitAny: user defined
         customTools?: Record<string, Tool<z.ZodSchema, any>>;
+        maxSteps?: number;
       }): Promise<{ result: z.infer<T> }> => {
-        const MAX_STEPS = 300;
+        const MAX_STEPS = task.maxSteps ?? 100;
         const CONVERSATION_LOOK_BACK = 7;
 
         // Create persistent memory store for this task
@@ -83,7 +84,7 @@ export function createAgent(options: {
           complete_task: createCompleteTaskTool({
             ground,
             evaluator,
-            outputSchema: task.outputSchema ?? z.string(),
+            outputSchema: task.outputSchema ?? z.object({ value: z.string() }),
             currentInstruction: task.instructions,
           }),
           memory: createMemoryTool({
@@ -307,7 +308,7 @@ export function createAgent(options: {
                 content: [
                   {
                     type: "text",
-                    text: "You haven't called any tools. Please continue with the task or use the complete_task tool if you believe the task is complete and all requirements have been met.",
+                    text: "Please continue with the task or use the complete_task tool if you believe the task is complete and all requirements have been met.",
                   },
                 ],
               },
