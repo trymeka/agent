@@ -40,7 +40,7 @@ const aiProvider = createVercelAIProvider({
 });
 const computerProvider = createScrapybaraComputerProvider({
   apiKey: process.env.SCRAPYBARA_API_KEY,
-  initialUrl: "https://www.guardiandentistry.com/our-network",
+  initialUrl: "https://news.ycombinator.com",
 });
 
 const agent = createAgent({
@@ -49,33 +49,41 @@ const agent = createAgent({
   logger: console,
 });
 
-const session = await agent.session.initialize();
-agent.session.run({
-  sessionId: session.id,
-  instructions:
-    "Find the email address and phone number for the various practices in the location list.",
+const session = await agent.initializeSession();
+const result = await session.runTask({
+  instructions: "Summarize the top 3 articles",
   outputSchema: z.object({
-    locations: z.array(
+    articles: z.array(
       z.object({
-        name: z.string(),
-        address: z.string(),
-        phone: z.string(),
-        website: z.string(),
-        email: z.string(),
+        title: z.string(),
+        url: z.string(),
+        summary: z.string(),
       }),
     ),
   }),
-}).then(async (result) => {
-    console.log("results", JSON.stringify(result, null, 2));
-    await session.end();
-    process.exit(0);
-  });
+});
 
-// getting session status
-setInterval(() => {
-  const current = session.get();
-  console.log("current session", current);
-}, 5_000);
+console.log("results", JSON.stringify(result, null, 2));
+
+await session.end();
+const sessionDetails = session.get();
+
+console.log(
+  "session details",
+  sessionDetails.tasks.map((task) => {
+    return {
+      logs: JSON.stringify(
+        task.logs.map((log) => {
+          return {
+            ...log,
+            screenshot: "image-data",
+          };
+        }),
+      ),
+      result: task.result,
+    };
+  }),
+);
 ```
 
 ## Key Features
