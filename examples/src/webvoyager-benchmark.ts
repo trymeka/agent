@@ -3,7 +3,8 @@ import { createVercelAIProvider } from "@trymeka/ai-provider-vercel";
 import { createScrapybaraComputerProvider } from "@trymeka/computer-provider-scrapybara";
 import { createAgent } from "@trymeka/core/ai/agent";
 import { z } from "zod";
-import * as fs from "fs/promises";
+import * as fs from "node:fs/promises";
+import { Buffer } from "node:buffer";
 import OpenAI from "openai";
 
 interface WebVoyagerTask {
@@ -17,14 +18,14 @@ interface EvaluationResult {
   taskId: string;
   success: boolean;
   completionTime: number;
-  output: any;
+  output: unknown;
   gpt4vValidation?: {
     success: boolean;
     reasoning: string;
   };
   finalScreenshots?: string[];
   error?: string;
-  logs: any[];
+  logs: unknown[];
 }
 
 if (!process.env.SCRAPYBARA_API_KEY) {
@@ -54,7 +55,7 @@ function createGenericOutputSchema() {
 
 async function validateWithGPT4V(
   task: WebVoyagerTask,
-  agentOutput: any,
+  agentOutput: unknown,
   screenshots: string[],
   openaiClient: OpenAI
 ): Promise<{ success: boolean; reasoning: string }> {
@@ -85,10 +86,10 @@ async function validateWithGPT4V(
 -- NOTE that the screenshot is authentic, but the response provided by LLM is generated at the end of web browsing, and there may be discrepancies between the text and the screenshots.
 -- Note the difference: 1) Result response may contradict the screenshot, then the content of the screenshot prevails, 2) The content in the Result response is not mentioned on the screenshot, choose to believe the content.
 
-You should elaborate on how you arrived at your final evaluation and then provide a definitive verdict on whether the task has been successfully accomplished, either as 'SUCCESS' or 'NOT SUCCESS'."`;
+You should elaborate on how you arrived at your final evaluation and then provide a definitive verdict on whether the task has been successfully accomplished, either as 'SUCCESS' or 'NOT SUCCESS'.`;
 
   const USER_PROMPT = `TASK: ${task.ques}
-Result Response: ${agentOutput.result}
+Result Response: ${(agentOutput as { result?: string })?.result ?? ""}
 ${screenshots.length} screenshots at the end: `;
 
   const messages = [
@@ -113,7 +114,7 @@ ${screenshots.length} screenshots at the end: `;
   try {
     const response = await openaiClient.chat.completions.create({
       model: "o3",
-      messages: messages as any,
+      messages: messages as OpenAI.ChatCompletionMessageParam[],
       max_completion_tokens: 1000,
       seed: 42,
     });
@@ -128,21 +129,88 @@ ${screenshots.length} screenshots at the end: `;
   }
 }
 
+type TaskLogger = {
+  info: (message: string, data?: unknown) => void;
+  error: (message: string, data?: unknown) => void;
+  warn: (message: string, data?: unknown) => void;
+  screenshot: (screenshotDataUrl: string, data?: unknown) => void;
+};
+
 async function evaluateTask(
-  aiProvider: any,
+  aiProvider: unknown,
   task: WebVoyagerTask,
   openaiClient: OpenAI
 ): Promise<EvaluationResult> {
   const startTime = Date.now();
-  const logs: any[] = [];
+  const logs: unknown[] = [];
 
   try {
     console.log(`\n=== Starting Task: ${task.id} - ${task.web_name} ===`);
     console.log(`URL: ${task.web}`);
     console.log(`Question: ${task.ques}`);
 
+    const taskLogger: TaskLogger = {
+      info: (message: string, data?: unknown) => {
+        logs.push({
+          level: "info",
+          message,
+          data,
+          timestamp: new Date().toISOString(),
+        });
+        if (data) {
+          console.log(`[INFO] ${message}`, data);
+        } else {
+          console.log(`[INFO] ${message}`);
+        }
+      },
+      error: (message: string, data?: unknown) => {
+        logs.push({
+          level: "error",
+          message,
+          data,
+          timestamp: new Date().toISOString(),
+        });
+        if (data) {
+          console.error(`[ERROR] ${message}`, data);
+        } else {
+          console.error(`[ERROR] ${message}`);
+        }
+      },
+      warn: (message: string, data?: unknown) => {
+        logs.push({
+          level: "warn",
+          message,
+          data,
+          timestamp: new Date().toISOString(),
+        });
+        if (data) {
+          console.warn(`[WARN] ${message}`, data);
+        } else {
+          console.warn(`[WARN] ${message}`);
+        }
+      },
+      screenshot: (screenshotDataUrl: string, data?: unknown) => {
+        logs.push({
+          level: "screenshot",
+          message: "screenshot",
+          screenshot: screenshotDataUrl,
+          data,
+          timestamp: new Date().toISOString(),
+        });
+        const preview =
+          screenshotDataUrl && typeof screenshotDataUrl === "string"
+            ? `${screenshotDataUrl.slice(0, 30)}...`
+            : "";
+        if (data) {
+          console.log("[SCREENSHOT] Screenshot taken", { ...data, preview });
+        } else {
+          console.log("[SCREENSHOT] Screenshot taken", { preview });
+        }
+      },
+    };
+
     const computerProvider = createScrapybaraComputerProvider({
-      apiKey: process.env.SCRAPYBARA_API_KEY!,
+      apiKey: process.env.SCRAPYBARA_API_KEY ?? "",
       initialUrl: task.web,
       uploadScreenshot: async ({ screenshotBase64, sessionId, step }) => {
         const buffer = Buffer.from(screenshotBase64, "base64");
@@ -159,50 +227,6 @@ async function evaluateTask(
         return { url: `data:image/png;base64,${screenshotBase64}` };
       },
     });
-
-    const taskLogger = {
-      info: (message: string, data?: any) => {
-        logs.push({
-          level: "info",
-          message,
-          data,
-          timestamp: new Date().toISOString(),
-        });
-        console.log(`[INFO] ${message}`, data || "");
-      },
-      error: (message: string, data?: any) => {
-        logs.push({
-          level: "error",
-          message,
-          data,
-          timestamp: new Date().toISOString(),
-        });
-        console.error(`[ERROR] ${message}`, data || "");
-      },
-      warn: (message: string, data?: any) => {
-        logs.push({
-          level: "warn",
-          message,
-          data,
-          timestamp: new Date().toISOString(),
-        });
-        console.warn(`[WARN] ${message}`, data || "");
-      },
-      screenshot: (screenshotDataUrl: string, data?: any) => {
-        logs.push({
-          level: "screenshot",
-          message: "screenshot",
-          screenshot: screenshotDataUrl,
-          data,
-          timestamp: new Date().toISOString(),
-        });
-        const preview =
-          screenshotDataUrl && typeof screenshotDataUrl === "string"
-            ? screenshotDataUrl.slice(0, 30) + "..."
-            : "";
-        console.log(`[SCREENSHOT] Screenshot taken`, { ...data, preview });
-      },
-    };
 
     const taskAgent = createAgent({
       aiProvider,
@@ -223,27 +247,57 @@ async function evaluateTask(
 
     console.log(`\n=== Task ${task.id} Completed ===`);
     console.log(`Time: ${completionTime}ms`);
-    console.log(`Result:`, JSON.stringify(result.result, null, 2));
+    console.log(
+      "Result:",
+      JSON.stringify((result as { result: unknown }).result, null, 2)
+    );
 
-    const finalScreenshots = logs
-      .filter(
-        (log) =>
-          log.data?.screenshot ||
-          log.data?.image ||
-          log.data?.url?.includes("data:image") ||
-          log.data?.url?.includes("http") ||
-          log.screenshot ||
-          log.message.includes("screenshot")
-      )
-      .map((log) => {
+    const finalScreenshots = (logs as unknown[])
+      .filter((log: unknown) => {
+        const l = log as Record<string, unknown>;
         return (
-          log.screenshot ||
-          log.data?.screenshot ||
-          log.data?.image ||
-          log.data?.url ||
-          log.data?.data ||
-          log.message.match(/data:image[^"'\s]+/)?.[0] ||
-          log.message.match(/https?:\/\/[^\s"']+/)?.[0]
+          (l.data && typeof l.data === "object" && "screenshot" in l.data) ||
+          (l.data && typeof l.data === "object" && "image" in l.data) ||
+          (l.data &&
+            typeof l.data === "object" &&
+            typeof (l.data as Record<string, unknown>).url === "string" &&
+            ((l.data as Record<string, unknown>).url as string).includes(
+              "data:image"
+            )) ||
+          (l.data &&
+            typeof l.data === "object" &&
+            typeof (l.data as Record<string, unknown>).url === "string" &&
+            ((l.data as Record<string, unknown>).url as string).includes(
+              "http"
+            )) ||
+          "screenshot" in l ||
+          (typeof l.message === "string" && l.message.includes("screenshot"))
+        );
+      })
+      .map((log: unknown) => {
+        const l = log as Record<string, unknown>;
+        return (
+          l.screenshot ||
+          (l.data &&
+            typeof l.data === "object" &&
+            "screenshot" in l.data &&
+            (l.data as Record<string, unknown>).screenshot) ||
+          (l.data &&
+            typeof l.data === "object" &&
+            "image" in l.data &&
+            (l.data as Record<string, unknown>).image) ||
+          (l.data &&
+            typeof l.data === "object" &&
+            "url" in l.data &&
+            (l.data as Record<string, unknown>).url) ||
+          (l.data &&
+            typeof l.data === "object" &&
+            "data" in l.data &&
+            (l.data as Record<string, unknown>).data) ||
+          (typeof l.message === "string" &&
+            l.message.match(/data:image[^"'\s]+/)?.[0]) ||
+          (typeof l.message === "string" &&
+            l.message.match(/https?:\/\/[^\s"']+/)?.[0])
         );
       })
       .filter(Boolean)
@@ -272,17 +326,17 @@ async function evaluateTask(
     );
     if (finalScreenshots.length === 0) {
       console.log(
-        `⚠️  No screenshots found in logs. Log entries:`,
+        "⚠️  No screenshots found in logs. Log entries:",
         logs.length
       );
     }
 
-    let gpt4vValidation;
+    let gpt4vValidation: { success: boolean; reasoning: string } | undefined;
     try {
       gpt4vValidation = await validateWithGPT4V(
         task,
-        result.result,
-        finalScreenshots,
+        (result as { result: unknown }).result,
+        finalScreenshots as string[],
         openaiClient
       );
       console.log(
@@ -296,8 +350,12 @@ async function evaluateTask(
 
     const finalSuccess = gpt4vValidation?.success ?? false;
 
-    console.log(`\n=== Final Evaluation ===`);
-    console.log(`Agent Success: ${result.result.success}`);
+    console.log("\n=== Final Evaluation ===");
+    console.log(
+      `Agent Success: ${
+        (result as { result: { success: boolean } }).result.success
+      }`
+    );
     console.log(`GPT-4V Success: ${gpt4vValidation?.success}`);
     console.log(`Final Success: ${finalSuccess}`);
 
@@ -305,15 +363,15 @@ async function evaluateTask(
       taskId: task.id,
       success: finalSuccess,
       completionTime,
-      output: result.result,
+      output: (result as { result: unknown }).result,
       gpt4vValidation,
-      finalScreenshots,
+      finalScreenshots: finalScreenshots as string[],
       logs,
     };
   } catch (error) {
     const completionTime = Date.now() - startTime;
     console.error(`\n=== Task ${task.id} Failed ===`);
-    console.error(`Error:`, error);
+    console.error("Error:", error);
 
     return {
       taskId: task.id,
@@ -329,20 +387,20 @@ async function evaluateTask(
 async function runWebVoyagerEvaluation(
   tasksPath: string,
   outputPath: string,
-  modelName: string = "o3"
+  modelName = "o3"
 ) {
-  console.log(`\n🚀 Starting WebVoyager Benchmark Evaluation 🚀`);
+  console.log("\n🚀 Starting WebVoyager Benchmark Evaluation 🚀");
 
   const allTasks = await loadWebVoyagerTasks(tasksPath);
 
   const aiProvider = createVercelAIProvider({
     model: createOpenAI({
-      apiKey: process.env.OPENAI_API_KEY!,
+      apiKey: process.env.OPENAI_API_KEY ?? "",
     })(modelName),
   });
 
   const openaiClient = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY!,
+    apiKey: process.env.OPENAI_API_KEY ?? "",
   });
 
   const results: EvaluationResult[] = [];
@@ -377,8 +435,8 @@ async function runWebVoyagerEvaluation(
     model: modelName,
   };
 
-  console.log(`\n🎯 Evaluation Complete!`);
-  console.log(`Summary:`, summary);
+  console.log("\n🎯 Evaluation Complete!");
+  console.log("Summary:", summary);
 
   const finalOutput = {
     metadata: {
