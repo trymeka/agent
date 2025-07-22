@@ -372,9 +372,7 @@ export function createAgent(options: {
             // If the tool is `complete_task`, we should return the result and stop the agent.
             if (result.type === "completion") {
               currentTask.result = result.output;
-              if (currentSession) {
-                currentSession.status = "idle";
-              }
+              currentSession.status = "idle";
               return { result: result.output };
             }
 
@@ -412,7 +410,7 @@ export function createAgent(options: {
         tasks: [],
         status: "queued",
       });
-      const { liveUrl, browser } = await computerProvider
+      const { liveUrl } = await computerProvider
         .start(sessionId)
         .catch((error) => {
           throw new ComputerProviderError("Failed to start computer provider", {
@@ -422,7 +420,6 @@ export function createAgent(options: {
       sessionMap.set(sessionId, {
         id: sessionId,
         liveUrl: liveUrl ?? "",
-        ...(browser ? { browser } : {}),
         tasks: [],
         status: "idle",
       });
