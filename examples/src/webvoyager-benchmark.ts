@@ -1,11 +1,11 @@
+import { Buffer } from "node:buffer";
+import * as fs from "node:fs/promises";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createVercelAIProvider } from "@trymeka/ai-provider-vercel";
 import { createScrapybaraComputerProvider } from "@trymeka/computer-provider-scrapybara";
 import { createAgent } from "@trymeka/core/ai/agent";
-import { z } from "zod";
-import * as fs from "node:fs/promises";
-import { Buffer } from "node:buffer";
 import OpenAI from "openai";
+import { z } from "zod";
 
 interface WebVoyagerTask {
   web_name: string;
@@ -36,7 +36,7 @@ if (!process.env.OPENAI_API_KEY) {
 }
 
 async function loadWebVoyagerTasks(
-  tasksPath: string
+  tasksPath: string,
 ): Promise<WebVoyagerTask[]> {
   const data = await fs.readFile(tasksPath, "utf-8");
   return JSON.parse(data);
@@ -57,10 +57,10 @@ async function validateWithGPT4V(
   task: WebVoyagerTask,
   agentOutput: unknown,
   screenshots: string[],
-  openaiClient: OpenAI
+  openaiClient: OpenAI,
 ): Promise<{ success: boolean; reasoning: string }> {
   console.log(
-    `🔍 GPT-4V Validation: ${screenshots.length} screenshots provided`
+    `🔍 GPT-4V Validation: ${screenshots.length} screenshots provided`,
   );
 
   if (screenshots.length === 0) {
@@ -108,7 +108,7 @@ ${screenshots.length} screenshots at the end: `;
   ];
 
   console.log(
-    `📤 Sending ${screenshots.length} screenshots to GPT-4V for validation`
+    `📤 Sending ${screenshots.length} screenshots to GPT-4V for validation`,
   );
 
   try {
@@ -139,7 +139,7 @@ type TaskLogger = {
 async function evaluateTask(
   aiProvider: unknown,
   task: WebVoyagerTask,
-  openaiClient: OpenAI
+  openaiClient: OpenAI,
 ): Promise<EvaluationResult> {
   const startTime = Date.now();
   const logs: unknown[] = [];
@@ -249,7 +249,7 @@ async function evaluateTask(
     console.log(`Time: ${completionTime}ms`);
     console.log(
       "Result:",
-      JSON.stringify((result as { result: unknown }).result, null, 2)
+      JSON.stringify((result as { result: unknown }).result, null, 2),
     );
 
     const finalScreenshots = (logs as unknown[])
@@ -262,13 +262,13 @@ async function evaluateTask(
             typeof l.data === "object" &&
             typeof (l.data as Record<string, unknown>).url === "string" &&
             ((l.data as Record<string, unknown>).url as string).includes(
-              "data:image"
+              "data:image",
             )) ||
           (l.data &&
             typeof l.data === "object" &&
             typeof (l.data as Record<string, unknown>).url === "string" &&
             ((l.data as Record<string, unknown>).url as string).includes(
-              "http"
+              "http",
             )) ||
           "screenshot" in l ||
           (typeof l.message === "string" && l.message.includes("screenshot"))
@@ -322,13 +322,10 @@ async function evaluateTask(
     }
 
     console.log(
-      `📸 Found ${finalScreenshots.length} screenshots for validation`
+      `📸 Found ${finalScreenshots.length} screenshots for validation`,
     );
     if (finalScreenshots.length === 0) {
-      console.log(
-        "⚠️  No screenshots found in logs. Log entries:",
-        logs.length
-      );
+      console.log("⚠️  No screenshots found in logs. Log entries:", logs.length);
     }
 
     let gpt4vValidation: { success: boolean; reasoning: string } | undefined;
@@ -337,10 +334,10 @@ async function evaluateTask(
         task,
         (result as { result: unknown }).result,
         finalScreenshots as string[],
-        openaiClient
+        openaiClient,
       );
       console.log(
-        `GPT-4V Validation: ${gpt4vValidation.success ? "SUCCESS" : "FAILED"}`
+        `GPT-4V Validation: ${gpt4vValidation.success ? "SUCCESS" : "FAILED"}`,
       );
       console.log(`Reasoning: ${gpt4vValidation.reasoning}`);
     } catch (validationError) {
@@ -354,7 +351,7 @@ async function evaluateTask(
     console.log(
       `Agent Success: ${
         (result as { result: { success: boolean } }).result.success
-      }`
+      }`,
     );
     console.log(`GPT-4V Success: ${gpt4vValidation?.success}`);
     console.log(`Final Success: ${finalSuccess}`);
@@ -387,7 +384,7 @@ async function evaluateTask(
 async function runWebVoyagerEvaluation(
   tasksPath: string,
   outputPath: string,
-  modelName = "o3"
+  modelName = "o3",
 ) {
   console.log("\n🚀 Starting WebVoyager Benchmark Evaluation 🚀");
 
