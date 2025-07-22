@@ -36,6 +36,7 @@ export function createAgent(options: {
         instructions: string;
         result: unknown;
         logs: AgentLog[];
+        initialUrl: string | undefined;
       }[];
     }
   >();
@@ -64,6 +65,7 @@ export function createAgent(options: {
       },
       runTask: async <T extends z.ZodSchema>(task: {
         instructions: string;
+        initialUrl?: string;
         outputSchema?: T;
         // biome-ignore lint/suspicious/noExplicitAny: user defined
         customTools?: Record<string, Tool<z.ZodSchema, any>>;
@@ -88,6 +90,7 @@ export function createAgent(options: {
             memoryStore,
           }),
         };
+
         // biome-ignore lint/suspicious/noExplicitAny: user defined
         const allTools: Record<string, Tool<z.ZodSchema, any>> = {
           ...coreTools,
@@ -147,8 +150,21 @@ export function createAgent(options: {
           return messages;
         }
 
-        const groundModelName = await ground.modelName();
-        const alternateModelName = await alternateGround?.modelName();
+        if (task.initialUrl) {
+          await computerProvider.navigateTo({
+            sessionId,
+            url: task.initialUrl,
+          });
+          logger.info("[Agent] Navigated to initial URL", {
+            initialUrl: task.initialUrl,
+          });
+        }
+
+        const [groundModelName, alternateModelName] = await Promise.all([
+          ground.modelName(),
+          alternateGround?.modelName(),
+        ]);
+
         const getCurrentModel = (step: number) => {
           // If no alternateGround, always use ground
           if (!alternateGround) {
@@ -173,10 +189,12 @@ export function createAgent(options: {
           instructions: string;
           result: unknown;
           logs: AgentLog[];
+          initialUrl: string | undefined;
         } = {
           instructions: task.instructions,
           logs: [],
           result: undefined,
+          initialUrl: task.initialUrl,
         };
         currentSession.tasks.push(currentTask);
 

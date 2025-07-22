@@ -109,6 +109,22 @@ export function createScrapybaraComputerProvider(options: {
     screenSize() {
       return Promise.resolve(screenSize);
     },
+    navigateTo: async (args: {
+      sessionId: string;
+      url: string;
+    }) => {
+      const { sessionId, url } = args;
+      const result = sessionMap.get(sessionId);
+      if (!result) {
+        throw new ComputerProviderError(
+          `No instance found for sessionId ${sessionId}`,
+        );
+      }
+      const cdpUrl = (await result.instance.getCdpUrl()).cdpUrl;
+      const browser = await chromium.connectOverCDP(cdpUrl);
+      const page = getPage(browser, "Scrapybara");
+      await page.goto(url);
+    },
     uploadScreenshot: options.uploadScreenshot
       ? options.uploadScreenshot
       : undefined,

@@ -84,7 +84,8 @@ export function createMemoryTool({
               content: [
                 {
                   type: "text" as const,
-                  text: `Stored data under key '${key}'`,
+                  text: `Successfully stored data under key '${key}'. 
+Please proceed with the next step.`,
                 },
               ],
             };
@@ -108,8 +109,10 @@ export function createMemoryTool({
                 {
                   type: "text" as const,
                   text: existing
-                    ? `Updated data for key '${key}'`
-                    : `Key '${key}' didn't exist, stored new data`,
+                    ? `Successfully updated data for key '${key}'. 
+Please proceed with the next step.`
+                    : `Key '${key}' didn't exist, successfully stored new data. 
+Please proceed with the next step.`,
                 },
               ],
             };
@@ -135,7 +138,8 @@ export function createMemoryTool({
                   text:
                     value === undefined
                       ? `No data found for key '${key}'`
-                      : `Data for '${key}': ${value}`,
+                      : `Successfully retrieved data for key '${key}': ${value}. 
+Please proceed with the next step.`,
                 },
               ],
             };
@@ -159,8 +163,8 @@ export function createMemoryTool({
                 {
                   type: "text" as const,
                   text: deleted
-                    ? `Deleted data for key '${key}'`
-                    : `No data found for key '${key}'`,
+                    ? `Successfully deleted data for key '${key}'. Please proceed with the next step.`
+                    : `No data found for key '${key}'. Please proceed with the next step.`,
                 },
               ],
             };
@@ -185,8 +189,8 @@ export function createMemoryTool({
                   type: "text" as const,
                   text:
                     keys.length > 0
-                      ? `Stored keys: ${keys.join(", ")}`
-                      : "No data stored in memory",
+                      ? `Successfully retrieved keys. Keys: ${keys.join(", ")}. Please proceed with the next step.`
+                      : "No data stored in memory. Please proceed with the next step.",
                 },
               ],
             };
