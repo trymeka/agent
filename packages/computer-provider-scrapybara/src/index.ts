@@ -97,7 +97,11 @@ export function createScrapybaraComputerProvider(options: {
   screenSize?: { width: number; height: number };
   initialUrl?: string;
   logger?: Logger;
-}): ComputerProvider<{ browser: Browser; page: Page }> {
+}): ComputerProvider<{
+  browser: Browser;
+  page: Page;
+  instance: BrowserInstance;
+}> {
   const logger = options.logger ?? createNoOpLogger();
   const screenSize = options.screenSize ?? { width: 1600, height: 900 };
   const scrapybaraClient = new ScrapybaraClient({
@@ -120,7 +124,7 @@ export function createScrapybaraComputerProvider(options: {
       const browser = await chromium.connectOverCDP(cdpUrl);
       const page = getPage(browser, "Scrapybara");
 
-      return { browser, page };
+      return { browser, page, instance: result.instance };
     },
     navigateTo: async (args: {
       sessionId: string;
