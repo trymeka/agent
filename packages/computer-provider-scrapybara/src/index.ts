@@ -145,7 +145,6 @@ export function createScrapybaraComputerProvider(options: {
       return {
         computerProviderId: instance.id,
         liveUrl: streamUrl,
-        browser: browser,
       };
     },
 

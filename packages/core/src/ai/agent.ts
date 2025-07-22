@@ -2,7 +2,6 @@ import { z } from "zod";
 import type { AIProvider, AgentLog, AgentMessage, PlanningData } from ".";
 import { type Tool, createCompleteTaskTool } from "../tools";
 import {
-  type BrowserInstance,
   type ComputerActionResult,
   type ComputerProvider,
   createComputerTool,
@@ -14,63 +13,6 @@ import { AIProviderError, AgentError } from "./errors";
 import { SYSTEM_PROMPT } from "./prompts/system";
 
 const sessionIdGenerator = () => `session_${crypto.randomUUID()}`;
-
-function getActivePage(browser: unknown): string | undefined {
-  try {
-    if (!browser || typeof browser !== "object") return undefined;
-
-    // Type guard for Playwright Browser-like object
-    const browserInstance = browser as BrowserInstance;
-    if (
-      !browserInstance.contexts ||
-      typeof browserInstance.contexts !== "function"
-    ) {
-      return undefined;
-    }
-
-    const contexts = browserInstance.contexts();
-    if (!Array.isArray(contexts) || contexts.length === 0) {
-      return undefined;
-    }
-
-    // Iterate through all contexts to find the best page
-    for (const context of contexts) {
-      if (!context.pages || typeof context.pages !== "function") continue;
-
-      const pages = context.pages();
-      if (!Array.isArray(pages)) continue;
-
-      // Look for first non-blank page
-      const nonBlankPage = pages.find((p) => {
-        try {
-          return (
-            p?.url && typeof p.url === "function" && p.url() !== "about:blank"
-          );
-        } catch {
-          return false;
-        }
-      });
-
-      if (nonBlankPage?.url && typeof nonBlankPage.url === "function") {
-        return nonBlankPage.url();
-      }
-
-      // Fallback to first page if no non-blank page found
-      if (
-        pages.length > 0 &&
-        pages[0] &&
-        pages[0].url &&
-        typeof pages[0].url === "function"
-      ) {
-        return pages[0].url();
-      }
-    }
-
-    return undefined;
-  } catch {
-    return undefined;
-  }
-}
 
 export function createAgent(options: {
   aiProvider: AIProvider;
@@ -86,7 +28,6 @@ export function createAgent(options: {
       id: string;
       liveUrl: string;
       status: "queued" | "running" | "idle" | "stopped";
-      browser?: unknown;
       tasks: {
         instructions: string;
         result: unknown;
@@ -169,14 +110,12 @@ export function createAgent(options: {
 
           if (step > CONVERSATION_LOOK_BACK) {
             const task = conversationChunk.get(1);
-            if (task) {
+            const initialTaskMessage = task?.filter(
+              (msg) => msg.role === "user",
+            );
+            if (initialTaskMessage?.length) {
               // Only preserve the initial user task message, not assistant responses/planning from Step 1
-              const initialTaskMessage = task.filter(
-                (msg) => msg.role === "user",
-              );
-              if (initialTaskMessage.length > 0) {
-                relevantConversations.unshift([1, initialTaskMessage]);
-              }
+              relevantConversations.unshift([1, initialTaskMessage]);
             }
           }
 
@@ -319,13 +258,6 @@ export function createAgent(options: {
             ]);
           }
 
-          // Get current URL if browser is available
-          const currentSession = sessionMap.get(sessionId);
-          let currentUrl: string | undefined;
-          if (currentSession?.browser) {
-            currentUrl = getActivePage(currentSession.browser);
-          }
-
           // Planning data will be extracted from computer actions
           let planningData: PlanningData | undefined;
 
@@ -351,7 +283,6 @@ export function createAgent(options: {
             screenshot: "",
             step: step,
             timestamp: new Date().toISOString(),
-            ...(currentUrl ? { currentUrl } : {}),
             modelOutput: {
               done: {
                 type: "text",
