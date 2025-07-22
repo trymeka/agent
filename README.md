@@ -63,27 +63,8 @@ const result = await session.runTask({
   }),
 });
 
-console.log("results", JSON.stringify(result, null, 2));
-
 await session.end();
-const sessionDetails = session.get();
-
-console.log(
-  "session details",
-  sessionDetails.tasks.map((task) => {
-    return {
-      logs: JSON.stringify(
-        task.logs.map((log) => {
-          return {
-            ...log,
-            screenshot: "image-data",
-          };
-        }),
-      ),
-      result: task.result,
-    };
-  }),
-);
+console.log("results", JSON.stringify(result, null, 2));
 ```
 
 ## Key Features
