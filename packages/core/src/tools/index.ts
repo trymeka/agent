@@ -4,7 +4,7 @@ import type { AgentLog, AgentMessage, UserMessage } from "../ai";
 /**
  * Defines a tool that the agent can execute.
  */
-export interface Tool<T extends z.ZodSchema, Output> {
+export interface Tool<T extends z.ZodSchema, Output = never> {
   /** A description of what the tool does, for use by the AI model. */
   description: string;
 

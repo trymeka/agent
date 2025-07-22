@@ -31,8 +31,8 @@ export interface AssistantMessage {
 }
 
 export type AgentMessage = UserMessage | AssistantMessage;
+
 export interface PlanningData {
-  previousStepGoal?: string;
   previousStepEvaluation?: string;
   currentStepReasoning: string;
   nextStepGoal?: string;

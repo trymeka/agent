@@ -1,4 +1,4 @@
-import type { AgentLog, UserMessage } from "../ai";
+import type { AgentLog, PlanningData, UserMessage } from "../ai";
 
 export function createAgentLogUpdate({
   toolCallId,
@@ -17,6 +17,7 @@ export function createAgentLogUpdate({
     overrideLogScreenshot: boolean;
   };
   response: UserMessage;
+  planningData?: PlanningData;
 }) {
   return (log: AgentLog): AgentLog => {
     const toolCallEntry: AgentLog["modelOutput"]["done"][number] = {
