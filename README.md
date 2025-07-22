@@ -89,7 +89,7 @@ setInterval(() => {
 
 Meka is created from lessons learned from experimentation and publicly available research. Our fundamental philosophy in creating this agent is to think like how humans would, from vision to tools to memory. Here are some of the most important learnings:
 
-- **Vision-first Approach**: Captures complex websites more effectively than approaches that use DOM-based navigation or identification. The best vision models today with good visual grounding 
+- **Vision-first Approach**: Captures complex websites more effectively than approaches that use DOM-based navigation or identification. 
 - **VM Controls Over Browser Layer**: Provides better handling of system-level elements and alerts.
 - **Effective Memory Management**:
   - Avoid passing excessive context to maintain agent performance.
