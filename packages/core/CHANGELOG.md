@@ -1,5 +1,11 @@
 # @trymeka/core
 
+## 0.0.9
+
+### Patch Changes
+
+- 55b3f48: fix(core): empty schema for `runTask` should not throw
+
 ## 0.0.8
 
 ### Patch Changes
