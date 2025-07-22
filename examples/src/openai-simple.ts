@@ -18,7 +18,7 @@ const aiProvider = createVercelAIProvider({
 });
 const computerProvider = createScrapybaraComputerProvider({
   apiKey: process.env.SCRAPYBARA_API_KEY,
-  initialUrl: "https://www.guardiandentistry.com/our-network",
+  initialUrl: "https://news.ycombinator.com",
 });
 
 const agent = createAgent({
@@ -29,16 +29,13 @@ const agent = createAgent({
 
 const session = await agent.initializeSession();
 const result = await session.runTask({
-  instructions:
-    "Find 10 phone numbers for the various practices in the location list on this page.",
+  instructions: "Summarize the top 3 articles",
   outputSchema: z.object({
-    locations: z.array(
+    articles: z.array(
       z.object({
-        name: z.string(),
-        address: z.string(),
-        phone: z.string(),
-        website: z.string(),
-        email: z.string(),
+        title: z.string(),
+        url: z.string(),
+        summary: z.string(),
       }),
     ),
   }),
