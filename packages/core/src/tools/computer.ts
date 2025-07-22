@@ -1,5 +1,6 @@
 import z from "zod";
 import type { Tool } from ".";
+import { createAgentLogUpdate } from "../utils/agent-log";
 
 // Generic browser instance type (e.g., Playwright Browser)
 // This avoids importing specific browser libraries in the core package
@@ -142,6 +143,8 @@ export interface ComputerActionResult {
   timestamp: string;
 }
 export interface ComputerProvider {
+  getCurrentUrl(sessionId: string): Promise<string>;
+
   /** Takes a screenshot of the environment. */
   takeScreenshot(sessionId: string): Promise<string>; // Returns base64 image string
 
@@ -185,7 +188,7 @@ const computerToolSchema = z.object({
   previousStepEvaluation: z
     .string()
     .describe(
-      "Previous step evaluation: Did you achieve the goal you set? What worked? What didn't work? (Use 'Starting task' for first step)",
+      "Previous step evaluation: Did you achieve the goal you set? What worked? What didn't work?",
     ),
   currentStepReasoning: z
     .string()
@@ -202,19 +205,16 @@ export function createComputerTool({
   computerProvider,
 }: {
   computerProvider: ComputerProvider;
-}): Tool<
-  typeof computerToolSchema,
-  ComputerActionResult & {
-    screenshot: string | URL;
-    previousStepEvaluation: string;
-    currentStepReasoning: string;
-    nextStepGoal: string;
-  }
-> {
+}): Tool<typeof computerToolSchema> & {
+  getCurrentUrl: (context: { sessionId: string }) => Promise<string>;
+} {
   return {
     description:
       "Execute a computer action like clicking, dragging, typing, scrolling, etc. Use this for ALL interactions with the screen.",
     schema: computerToolSchema,
+    getCurrentUrl: (context) => {
+      return computerProvider.getCurrentUrl(context.sessionId);
+    },
     execute: async (args, context) => {
       const result = await computerProvider.performAction(args.action, context);
       const screenshot = await computerProvider.takeScreenshot(
@@ -225,14 +225,60 @@ export function createComputerTool({
         sessionId: context.sessionId,
         step: context.step,
       });
+      // Add planning data to conversation history
+      const planningMessage = `[PLANNING - Step ${context.step}]
+        Previous Step Evaluation: ${args.previousStepEvaluation}
+        Current Step Reasoning: ${args.currentStepReasoning}
+        Next Step Goal: ${args.nextStepGoal}`;
+
+      const response = {
+        role: "user" as const,
+        content: [
+          {
+            type: "text" as const,
+            text: planningMessage,
+          },
+          {
+            type: "text" as const,
+            text: `Computer action on ${result.timestamp}, result: ${result.actionPerformed}. Reasoning: ${result.reasoning} Screenshot as attached.`,
+          },
+          {
+            type: "image" as const,
+            image: screenshotUrl?.url ? new URL(screenshotUrl.url) : screenshot,
+          },
+        ],
+      };
       return {
-        ...result,
-        screenshot: screenshotUrl?.url
-          ? new URL(screenshotUrl.url)
-          : screenshot,
-        previousStepEvaluation: args.previousStepEvaluation,
-        currentStepReasoning: args.currentStepReasoning,
-        nextStepGoal: args.nextStepGoal,
+        type: "response",
+        response,
+        updateCurrentAgentLog: createAgentLogUpdate({
+          toolCallId: context.toolCallId,
+          toolName: "computer_action",
+          args,
+          reasoning: result.reasoning,
+          screenshot: {
+            value: screenshotUrl?.url ?? screenshot,
+            overrideLogScreenshot: true,
+          },
+          planningData: {
+            previousStepEvaluation: args.previousStepEvaluation,
+            currentStepReasoning: args.currentStepReasoning,
+            nextStepGoal: args.nextStepGoal,
+          },
+          response: {
+            role: "user",
+            content: response.content.map((c) => {
+              if (c.type === "text") {
+                return c;
+              }
+              return {
+                type: "image",
+                image:
+                  screenshotUrl?.url ?? "[screenshot removed to preserve size]",
+              };
+            }),
+          },
+        }),
       };
     },
   };

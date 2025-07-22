@@ -1,5 +1,6 @@
 import z from "zod";
 import type { Tool } from ".";
+import { createAgentLogUpdate } from "../utils/agent-log";
 
 const memoryToolSchema = z.object({
   key: z
@@ -20,11 +21,11 @@ const memoryToolSchema = z.object({
 });
 
 export interface MemoryStore {
-  get(key: string): string | undefined;
-  set(key: string, value: string): void;
-  delete(key: string): boolean;
-  list(): string[];
-  clear(): void;
+  get(key: string): string | undefined | Promise<string | undefined>;
+  set(key: string, value: string): void | Promise<void>;
+  delete(key: string): boolean | Promise<boolean>;
+  list(): string[] | Promise<string[]>;
+  clear(): void | Promise<void>;
 }
 
 // Simple Map-based implementation for session memory
@@ -71,81 +72,153 @@ export function createMemoryTool({
     description:
       "Store, update, retrieve, or manage important information that persists across all steps. Use this to maintain running calculations, accumulated data, intermediate results, and any information you need to remember throughout the entire task.",
     schema: memoryToolSchema,
-    execute: (args, _context) => {
+    execute: async (args, context) => {
       const { key, data, action } = args;
 
       try {
         switch (action) {
-          case "store":
-            memoryStore.set(key, data);
-            return Promise.resolve({
-              result: `Stored data under key '${key}'`,
-              success: true,
-            });
-
+          case "store": {
+            await memoryStore.set(key, data);
+            const response = {
+              role: "user" as const,
+              content: [
+                {
+                  type: "text" as const,
+                  text: `Stored data under key '${key}'`,
+                },
+              ],
+            };
+            return {
+              type: "response",
+              response,
+              updateCurrentAgentLog: createAgentLogUpdate({
+                toolCallId: context.toolCallId,
+                toolName: "memory",
+                args,
+                response,
+              }),
+            };
+          }
           case "update": {
-            const existing = memoryStore.get(key);
-            if (existing === undefined) {
-              // If key doesn't exist, treat as store
-              memoryStore.set(key, data);
-              return Promise.resolve({
-                result: `Key '${key}' didn't exist, stored new data`,
-                success: true,
-              });
-            }
-            memoryStore.set(key, data);
-            return Promise.resolve({
-              result: `Updated data for key '${key}'`,
-              success: true,
-            });
+            const existing = await memoryStore.get(key);
+            await memoryStore.set(key, data);
+            const response = {
+              role: "user" as const,
+              content: [
+                {
+                  type: "text" as const,
+                  text: existing
+                    ? `Updated data for key '${key}'`
+                    : `Key '${key}' didn't exist, stored new data`,
+                },
+              ],
+            };
+            return {
+              type: "response",
+              response,
+              updateCurrentAgentLog: createAgentLogUpdate({
+                toolCallId: context.toolCallId,
+                toolName: "memory",
+                args,
+                response,
+              }),
+            };
           }
 
           case "retrieve": {
-            const value = memoryStore.get(key);
-            if (value === undefined) {
-              return Promise.resolve({
-                result: `No data found for key '${key}'`,
-                success: false,
-              });
-            }
-            return Promise.resolve({
-              result: `Data for '${key}': ${value}`,
-              success: true,
-            });
+            const value = await memoryStore.get(key);
+            const response = {
+              role: "user" as const,
+              content: [
+                {
+                  type: "text" as const,
+                  text:
+                    value === undefined
+                      ? `No data found for key '${key}'`
+                      : `Data for '${key}': ${value}`,
+                },
+              ],
+            };
+            return {
+              type: "response",
+              response,
+              updateCurrentAgentLog: createAgentLogUpdate({
+                toolCallId: context.toolCallId,
+                toolName: "memory",
+                args,
+                response,
+              }),
+            };
           }
 
           case "delete": {
-            const deleted = memoryStore.delete(key);
-            return Promise.resolve({
-              result: deleted
-                ? `Deleted data for key '${key}'`
-                : `No data found for key '${key}'`,
-              success: deleted,
-            });
+            const deleted = await memoryStore.delete(key);
+            const response = {
+              role: "user" as const,
+              content: [
+                {
+                  type: "text" as const,
+                  text: deleted
+                    ? `Deleted data for key '${key}'`
+                    : `No data found for key '${key}'`,
+                },
+              ],
+            };
+            return {
+              type: "response",
+              response,
+              updateCurrentAgentLog: createAgentLogUpdate({
+                toolCallId: context.toolCallId,
+                toolName: "memory",
+                args,
+                response,
+              }),
+            };
           }
 
           case "list": {
-            const keys = memoryStore.list();
-            return Promise.resolve({
-              result:
-                keys.length > 0
-                  ? `Stored keys: ${keys.join(", ")}`
-                  : "No data stored in memory",
-              success: true,
-            });
+            const keys = await memoryStore.list();
+            const response = {
+              role: "user" as const,
+              content: [
+                {
+                  type: "text" as const,
+                  text:
+                    keys.length > 0
+                      ? `Stored keys: ${keys.join(", ")}`
+                      : "No data stored in memory",
+                },
+              ],
+            };
+            return {
+              type: "response",
+              response,
+              updateCurrentAgentLog: createAgentLogUpdate({
+                toolCallId: context.toolCallId,
+                toolName: "memory",
+                args,
+                response,
+              }),
+            };
           }
 
           default:
-            return Promise.resolve({
-              result: `Unknown action: ${action}`,
-              success: false,
-            });
+            return {
+              type: "completion",
+              output: {
+                result: `Unknown action for key '${key}' in memory tool: ${action}`,
+                success: false,
+              },
+            };
         }
       } catch (error) {
-        return Promise.resolve({
-          result: `Memory operation failed: ${error instanceof Error ? error.message : String(error)}`,
-          success: false,
-        });
+        return {
+          type: "completion",
+          output: {
+            result: `Memory operation failed: ${error instanceof Error ? error.message : String(error)}`,
+            success: false,
+          },
+        };
       }
     },
   };
