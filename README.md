@@ -79,7 +79,6 @@ Meka is created from lessons learned from experimentation and publicly available
 - **Vision Model Selection**:
   - Vision models with strong visual grounding work effectively on their own.
   - Vision models without strong grounding benefit from additional tools (e.g., Omniparser) or a layered manager-executor model. This was tested but not implemented in this repo due to speed and cost concerns.
-- **Sampling for Iteration**: Faster iterations through targeted sampling rather than full benchmarks.
 - **LLM as a Judge**: Employ LLM evaluation during iterations inspired by [Reflexion](https://arxiv.org/pdf/2303.11366) and [related research](https://arxiv.org/abs/2404.06474).
 - **Stepwise Planning**: Consistent planning after each step significantly boosts performance ([source](https://arxiv.org/abs/2506.06698)).
 
