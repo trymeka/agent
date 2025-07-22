@@ -1,8 +1,6 @@
 # Meka Agent
 
-Meka Agent is an autonomous computer-using agent that delivers state-of-the-art browsing capabilities.
-
-The agent works and acts in the same way a human would, by using vision as its eyes and acting on a full computer context. 
+Meka Agent is an autonomous computer-using agent that delivers state-of-the-art browsing capabilities. The agent works and acts in the same way humans do, by purely using vision as its eyes and acting within a full computer context. 
 
 It is designed as a simple, extensible, and customizable framework, allowing flexibility in the choice of models, tools, and infrastructure providers.
 
@@ -17,16 +15,23 @@ Read more about the details of the benchmark results here.
 
 ## Getting Started
 
-To get started with Meka, install the various providers
+To get started with Meka, we packaged various providers that we have extensively tested. There are two main pieces:
+ - A vision model that has **good visual grounding**. From our experimentation, OpenAI o3, Claude Sonnet 4, and Claude Opus 4 are the best US-based models. We have not experimented with Chinese-based models but would love to see contributions!
+ - An infrastructure provider that exposes OS-level controls, not just a browser layer with Playwright screenshots. This is important for performance as a number of common web elements are actually rendered at the system level, invisible to the browser page.
 
+To get started, we choose OpenAI o3 as the model and Scrapybara as the VM-based infrastructure provider. We are open to submissions by other infra providers with OS-level controls!
+
+1. Install the main components of the SDK
 ```bash
 npm install @trymeka/core @trymeka/ai-provider-vercel @ai-sdk/openai @trymeka/computer-provider-scrapybara playwright-core
 ```
 
-Grab API keys from OpenAI and scrapybara, the computer provider.
+2. Create your .env file and enter your API keys from the starter providers
+```bash
+cp .env.example .env
+```
 
-Then instantiate the agent.
-
+3. Start the agent
 ```typescript
 const aiProvider = createVercelAIProvider({
   model: createOpenAI({
