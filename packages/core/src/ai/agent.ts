@@ -10,7 +10,7 @@ import { SYSTEM_PROMPT } from "./prompts/system";
 
 const sessionIdGenerator = () => `session_${crypto.randomUUID()}`;
 
-export function createAgent(options: {
+export function createAgent<T>(options: {
   aiProvider:
     | AIProvider
     | {
@@ -18,7 +18,7 @@ export function createAgent(options: {
         alternateGround?: AIProvider;
         evaluator?: AIProvider;
       };
-  computerProvider: ComputerProvider;
+  computerProvider: ComputerProvider<T>;
   logger?: Logger;
 }) {
   const { aiProvider, computerProvider, logger: loggerOverride } = options;

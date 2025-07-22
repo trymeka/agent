@@ -97,7 +97,7 @@ export function createScrapybaraComputerProvider(options: {
   screenSize?: { width: number; height: number };
   initialUrl?: string;
   logger?: Logger;
-}): ComputerProvider {
+}): ComputerProvider<{ browser: Browser; page: Page }> {
   const logger = options.logger ?? createNoOpLogger();
   const screenSize = options.screenSize ?? { width: 1600, height: 900 };
   const scrapybaraClient = new ScrapybaraClient({
@@ -108,6 +108,19 @@ export function createScrapybaraComputerProvider(options: {
   return {
     screenSize() {
       return Promise.resolve(screenSize);
+    },
+    getInstance: async (sessionId: string) => {
+      const result = sessionMap.get(sessionId);
+      if (!result) {
+        throw new ComputerProviderError(
+          `No instance found for sessionId ${sessionId}`,
+        );
+      }
+      const cdpUrl = (await result.instance.getCdpUrl()).cdpUrl;
+      const browser = await chromium.connectOverCDP(cdpUrl);
+      const page = getPage(browser, "Scrapybara");
+
+      return { browser, page };
     },
     navigateTo: async (args: {
       sessionId: string;
