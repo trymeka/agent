@@ -8,7 +8,7 @@ It is designed as a simple, extensible, and customizable framework, allowing fle
 
 The agent primarily focuses on web browsing today, and achieved state-of-the-art benchmark results in the WebArena and WebVoyager benchmarks.
 
-
+[benchmark bar graph images]
 
 Read more about the details of the benchmark results here.
 
