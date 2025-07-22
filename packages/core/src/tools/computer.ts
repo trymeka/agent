@@ -246,7 +246,8 @@ export function createComputerTool({
           args,
           reasoning: result.reasoning,
           screenshot: {
-            value: screenshotUrl?.url ?? screenshot,
+            value:
+              screenshotUrl?.url ?? "[screenshot removed to preserve size]",
             overrideLogScreenshot: true,
           },
           planningData: {
