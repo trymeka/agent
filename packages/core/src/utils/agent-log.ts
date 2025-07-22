@@ -7,6 +7,7 @@ export function createAgentLogUpdate({
   reasoning,
   screenshot,
   response,
+  planningData,
 }: {
   toolCallId: string;
   toolName: string;
@@ -42,6 +43,9 @@ export function createAgentLogUpdate({
     };
     if (screenshot?.overrideLogScreenshot) {
       updatedLog.screenshot = screenshot.value;
+    }
+    if (planningData) {
+      updatedLog.plan = planningData;
     }
 
     return updatedLog;

@@ -75,7 +75,7 @@ export interface AgentLog {
     outputTokensStep?: number | undefined;
     totalTokensStep?: number | undefined;
   };
-  planning?: PlanningData;
+  plan?: PlanningData;
 }
 /**
  * The result of a `generateText` call.
