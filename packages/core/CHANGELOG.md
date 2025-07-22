@@ -1,5 +1,11 @@
 # @trymeka/core
 
+## 0.0.10
+
+### Patch Changes
+
+- 68d74d0: fix(core): redact base64 image from logs
+
 ## 0.0.9
 
 ### Patch Changes
