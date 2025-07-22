@@ -67,14 +67,7 @@ await session.end();
 console.log("results", JSON.stringify(result, null, 2));
 ```
 
-## Key Features
-
-- **Bring your own LLM**: Meka is inherently hackable and works with any Modal that vercel AI sdk supports today.
-- **Extensible**: Meka is designed to be extensible. You can easily add your own tools and providers to the agent.
-- **Open Source**: Meka is oepn and builds on learnings that we've developed over testing ai agents on autonomous task.
-- **Typesafe**: Meka is written in TypeScript and provides a typesafe API for building and interacting with agents.
-
-## Approach
+## Agent Design
 
 Meka is created from lessons learned from experimentation and publicly available research. Our fundamental philosophy in creating this agent is to think like how humans would, from vision to tools to memory. Here are some of the most important learnings:
 
@@ -89,6 +82,13 @@ Meka is created from lessons learned from experimentation and publicly available
 - **Sampling for Iteration**: Faster iterations through targeted sampling rather than full benchmarks.
 - **LLM as a Judge**: Employ LLM evaluation during iterations inspired by [Reflexion](https://arxiv.org/pdf/2303.11366) and [related research](https://arxiv.org/abs/2404.06474).
 - **Stepwise Planning**: Consistent planning after each step significantly boosts performance ([source](https://arxiv.org/abs/2506.06698)).
+
+## Key Features
+
+- **Bring your own LLM**: Meka is inherently hackable and works with any Modal that vercel AI sdk supports today.
+- **Extensible**: Meka is designed to be extensible. You can easily add your own tools and providers to the agent.
+- **Open Source**: Meka is oepn and builds on learnings that we've developed over testing ai agents on autonomous task.
+- **Typesafe**: Meka is written in TypeScript and provides a typesafe API for building and interacting with agents.
 
 ## Contributing
 
