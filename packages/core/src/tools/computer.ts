@@ -134,7 +134,6 @@ export interface ComputerActionResult {
 }
 export interface ComputerProvider {
   getCurrentUrl(sessionId: string): Promise<string>;
-
   /** Takes a screenshot of the environment. */
   takeScreenshot(sessionId: string): Promise<string>; // Returns base64 image string
 
@@ -146,6 +145,7 @@ export interface ComputerProvider {
         step: number;
       }) => Promise<{ url: string }>)
     | undefined;
+  navigateTo(args: { sessionId: string; url: string }): Promise<void>;
 
   /** Executes a standard computer action. */
   performAction(

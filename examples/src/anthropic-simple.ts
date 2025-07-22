@@ -18,7 +18,6 @@ const aiProvider = createVercelAIProvider({
 });
 const computerProvider = createScrapybaraComputerProvider({
   apiKey: process.env.SCRAPYBARA_API_KEY,
-  initialUrl: "https://news.ycombinator.com/news",
 });
 
 const agent = createAgent({
@@ -31,6 +30,7 @@ const session = await agent.initializeSession();
 console.log("session created", session);
 const result = await session.runTask({
   instructions: "Search hacker news for the latest 5 news.",
+  initialUrl: "https://news.ycombinator.com/news",
   outputSchema: z.object({
     newsHeadlines: z.array(z.string()),
   }),
