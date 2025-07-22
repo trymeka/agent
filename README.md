@@ -87,7 +87,7 @@ setInterval(() => {
 
 ## Approach
 
-We adopted a lot of lessons from experimentation and publicly available research. Some of the most important lessons we learned that are packed into this agent:
+Meka is created from lessons learned from experimentation and publicly available research. Our fundamental philosophy in creating this agent is to think like how humans would, from vision to tools to memory. Here are some of the most important learnings:
 
 - **Vision-first Approach**: Captures complex websites more effectively than approaches that use DOM-based navigation or identification. The best vision models today with good visual grounding 
 - **VM Controls Over Browser Layer**: Provides better handling of system-level elements and alerts.
@@ -100,7 +100,6 @@ We adopted a lot of lessons from experimentation and publicly available research
 - **Sampling for Iteration**: Faster iterations through targeted sampling rather than full benchmarks.
 - **LLM as a Judge**: Employ LLM evaluation during iterations inspired by [Reflexion](https://arxiv.org/pdf/2303.11366) and [related research](https://arxiv.org/abs/2404.06474).
 - **Stepwise Planning**: Consistent planning after each step significantly boosts performance ([source](https://arxiv.org/abs/2506.06698)).
-- 
 
 ## Contributing
 
