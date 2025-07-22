@@ -40,6 +40,7 @@ const result = await session.runTask({
     ),
   }),
 });
+
 console.log("results", JSON.stringify(result, null, 2));
 
 await session.end();
