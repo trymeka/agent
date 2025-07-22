@@ -1,11 +1,7 @@
 import { z } from "zod";
 import type { AIProvider, AgentLog, AgentMessage } from ".";
 import { type Tool, createCompleteTaskTool } from "../tools";
-import {
-  type ComputerActionResult,
-  type ComputerProvider,
-  createComputerTool,
-} from "../tools/computer";
+import { type ComputerProvider, createComputerTool } from "../tools/computer";
 import { ComputerProviderError, ToolCallError } from "../tools/errors";
 import { SessionMemoryStore, createMemoryTool } from "../tools/memory";
 import { type Logger, createNoOpLogger } from "../utils/logger";
@@ -15,13 +11,21 @@ import { SYSTEM_PROMPT } from "./prompts/system";
 const sessionIdGenerator = () => `session_${crypto.randomUUID()}`;
 
 export function createAgent(options: {
-  aiProvider: AIProvider;
+  aiProvider:
+    | AIProvider
+    | {
+        ground: AIProvider;
+        alternateGround?: AIProvider;
+        evaluator?: AIProvider;
+      };
   computerProvider: ComputerProvider;
   logger?: Logger;
 }) {
-  // Dependencies are destructured and composed.
-  const { aiProvider, computerProvider } = options;
-  const logger = options.logger ?? createNoOpLogger();
+  const { aiProvider, computerProvider, logger: loggerOverride } = options;
+  const { ground, evaluator, alternateGround } =
+    "ground" in aiProvider ? aiProvider : { ground: aiProvider };
+  const logger = loggerOverride ?? createNoOpLogger();
+
   const sessionMap = new Map<
     string,
     {
@@ -75,8 +79,10 @@ export function createAgent(options: {
             computerProvider,
           }),
           complete_task: createCompleteTaskTool({
-            aiProvider,
+            ground,
+            evaluator,
             outputSchema: task.outputSchema ?? z.string(),
+            currentInstruction: task.instructions,
           }),
           memory: createMemoryTool({
             memoryStore,
@@ -120,9 +126,7 @@ export function createAgent(options: {
           );
 
           // Inject persistent memory context if available
-          const memoryContext = (
-            memoryStore as SessionMemoryStore
-          ).getMemoryContext();
+          const memoryContext = memoryStore.getMemoryContext();
           if (memoryContext) {
             // Add memory context as the first user message so it's always visible
             messages.unshift({
@@ -139,6 +143,23 @@ export function createAgent(options: {
           return messages;
         }
 
+        const groundModelName = await ground.modelName();
+        const alternateModelName = await alternateGround?.modelName();
+        const getCurrentModel = (step: number) => {
+          // If no alternateGround, always use ground
+          if (!alternateGround) {
+            return { model: groundModelName, provider: ground };
+          }
+          // Alternate between models: odd steps use ground, even steps use alternateGround
+          return step % 2 === 1
+            ? { model: groundModelName, provider: ground }
+            : // cast is okay because we know alternateGround is defined
+              {
+                model: alternateModelName as string,
+                provider: alternateGround,
+              };
+        };
+
         const currentSession = sessionMap.get(sessionId);
         if (!currentSession) {
           throw new AgentError(`Session not found for sessionId: ${sessionId}`);
@@ -150,7 +171,7 @@ export function createAgent(options: {
           logs: AgentLog[];
         } = {
           instructions: task.instructions,
-          logs: [] as AgentLog[],
+          logs: [],
           result: undefined,
         };
         currentSession.tasks.push(currentTask);
@@ -168,7 +189,6 @@ export function createAgent(options: {
               cause: error,
             });
           });
-        const modelName = await aiProvider.modelName();
         const firstScreenshot = await computerProvider
           .takeScreenshot(sessionId)
           .catch((error) => {
@@ -217,7 +237,8 @@ export function createAgent(options: {
           });
 
           // Generate model response
-          const response = await aiProvider
+          const currentModel = getCurrentModel(step);
+          const response = await currentModel.provider
             .generateText({
               systemPrompt: SYSTEM_PROMPT({
                 screenSize,
@@ -270,21 +291,22 @@ export function createAgent(options: {
               },
             ]);
           }
-
-          // Create agent log for this step
-          const agentLog: AgentLog = {
+          let agentLog: AgentLog = {
             screenshot: "",
-            step: step,
+            step,
             timestamp: new Date().toISOString(),
+            currentUrl: await computerProvider.getCurrentUrl(sessionId),
             modelOutput: {
-              done: {
-                type: "text",
-                text: response.text ?? "Processing...",
-                reasoning: response.reasoning ?? "No reasoning provided",
-              },
+              done: [
+                {
+                  type: "text",
+                  text: response.text ?? "Processing...",
+                  reasoning: response.reasoning ?? "No reasoning provided",
+                },
+              ],
             },
             usage: {
-              model: modelName,
+              model: currentModel.model,
               inputTokensStep: response.usage?.promptTokens,
               outputTokensStep: response.usage?.completionTokens,
               totalTokensStep: response.usage?.totalTokens,
@@ -337,66 +359,24 @@ export function createAgent(options: {
               });
 
             logger.info("[Agent] Tool call result", {
-              result: {
-                ...result,
-                ...(typeof result === "object" &&
-                !!result &&
-                "screenshot" in result
-                  ? {
-                      screenshot:
-                        result.screenshot instanceof URL
-                          ? result.screenshot.toString()
-                          : "image-data",
-                    }
-                  : {}),
-              },
+              result:
+                result.type === "completion"
+                  ? result.output
+                  : result.response.content.filter((c) => c.type === "text"),
             });
+
             // If the tool is `complete_task`, we should return the result and stop the agent.
-            if (toolCall.toolName === "complete_task") {
+            if (result.type === "completion") {
               currentTask.result = result.output;
               currentSession.status = "idle";
               return { result: result.output };
             }
 
-            // For computer actions, we expect a certain output to build the next message.
-            if (toolCall.toolName === "computer_action") {
-              const computerActionResult = result as ComputerActionResult & {
-                screenshot: string | URL;
-              };
-              agentLog.screenshot = computerActionResult.screenshot.toString();
-              agentLog.modelOutput.done.reasoning =
-                computerActionResult.reasoning;
-              buildMessageInput(step + 1, [
-                {
-                  role: "user",
-                  content: [
-                    {
-                      type: "text",
-                      text: `Computer action on ${computerActionResult.timestamp}, result: ${computerActionResult.actionPerformed}. Reasoning: ${computerActionResult.reasoning} Screenshot as attached.`,
-                    },
-                    {
-                      type: "image",
-                      image: computerActionResult.screenshot,
-                    },
-                  ],
-                },
-              ]);
-            } else {
-              // For other tools, we just add the result as text.
-              buildMessageInput(step + 1, [
-                {
-                  role: "user",
-                  content: [
-                    {
-                      type: "text",
-                      text: `Tool ${toolCall.toolName} executed with result: ${JSON.stringify(
-                        result,
-                      )}`,
-                    },
-                  ],
-                },
-              ]);
+            // Update agent log for this step
+            if (result.updateCurrentAgentLog) {
+              agentLog = result.updateCurrentAgentLog(agentLog);
             }
+            buildMessageInput(step + 1, [result.response]);
           }
 
           currentTask.logs.push(agentLog);

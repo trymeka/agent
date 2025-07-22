@@ -1,5 +1,6 @@
 import z from "zod";
 import type { Tool } from ".";
+import { createAgentLogUpdate } from "../utils/agent-log";
 
 export const parseComputerToolArgs = (args: string) => {
   const parsedArgs = (() => {
@@ -132,6 +133,8 @@ export interface ComputerActionResult {
   timestamp: string;
 }
 export interface ComputerProvider {
+  getCurrentUrl(sessionId: string): Promise<string>;
+
   /** Takes a screenshot of the environment. */
   takeScreenshot(sessionId: string): Promise<string>; // Returns base64 image string
 
@@ -179,11 +182,16 @@ export function createComputerTool({
 }): Tool<
   typeof computerToolSchema,
   ComputerActionResult & { screenshot: string | URL }
-> {
+> & {
+  getCurrentUrl: (context: { sessionId: string }) => Promise<string>;
+} {
   return {
     description:
       "Execute a computer action like clicking, dragging, typing, scrolling, etc. Use this for ALL interactions with the screen.",
     schema: computerToolSchema,
+    getCurrentUrl: (context) => {
+      return computerProvider.getCurrentUrl(context.sessionId);
+    },
     execute: async (args, context) => {
       const result = await computerProvider.performAction(args.action, context);
       const screenshot = await computerProvider.takeScreenshot(
@@ -194,11 +202,45 @@ export function createComputerTool({
         sessionId: context.sessionId,
         step: context.step,
       });
+      const response = {
+        role: "user" as const,
+        content: [
+          {
+            type: "text" as const,
+            text: `Computer action on ${result.timestamp}, result: ${result.actionPerformed}. Reasoning: ${result.reasoning} Screenshot as attached.`,
+          },
+          {
+            type: "image" as const,
+            image: screenshotUrl?.url ? new URL(screenshotUrl.url) : screenshot,
+          },
+        ],
+      };
       return {
-        ...result,
-        screenshot: screenshotUrl?.url
-          ? new URL(screenshotUrl.url)
-          : screenshot,
+        type: "response",
+        response,
+        updateCurrentAgentLog: createAgentLogUpdate({
+          toolCallId: context.toolCallId,
+          toolName: "computer_action",
+          args,
+          reasoning: result.reasoning,
+          screenshot: {
+            value: screenshotUrl?.url ?? screenshot,
+            overrideLogScreenshot: true,
+          },
+          response: {
+            role: "user",
+            content: response.content.map((c) => {
+              if (c.type === "text") {
+                return c;
+              }
+              return {
+                type: "image",
+                image:
+                  screenshotUrl?.url ?? "[screenshot removed to preserve size]",
+              };
+            }),
+          },
+        }),
       };
     },
   };
