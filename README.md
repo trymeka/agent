@@ -17,7 +17,7 @@ Read more about the details of the benchmark results here.
 
 To get started with Meka, we packaged various providers that we have extensively tested. There are two main pieces:
  - A vision model that has **good visual grounding**. From our experimentation, OpenAI o3, Claude Sonnet 4, and Claude Opus 4 are the best US-based models. We have not experimented with Chinese-based models but would love to see contributions!
- - An infrastructure provider that exposes OS-level controls, not just a browser layer with Playwright screenshots. This is important for performance as a number of common web elements are actually rendered at the system level, invisible to the browser page.
+ - An infrastructure provider that exposes OS-level controls, not just a browser layer with Playwright screenshots. This is important for performance as a number of common web elements are rendered at the system level, invisible to the browser page, severely handicapping the vision-first approach.
 
 To get started, we choose OpenAI o3 as the model and Scrapybara as the VM-based infrastructure provider. We are open to submissions by other infra providers with OS-level controls!
 
