@@ -102,9 +102,9 @@ const scrollActionSchema = z
 const typeActionSchema = z
   .object({
     type: z.literal("type").describe("Type of action to perform"),
-    text: z.string().describe("Text to type"),
+    text: z.string().min(1, "Text cannot be empty").describe("Text to type"),
   })
-  .describe("Type a certain text. Text MUST BE non-empty..");
+  .describe("Type a certain text. Text MUST BE non-empty.");
 
 const waitActionSchema = z
   .object({
@@ -174,15 +174,27 @@ const computerToolSchema = z.object({
     .describe(
       "The reasoning for performing the action. Make sure you provide a clear and concise reasoning for the action so that users can understand what you are doing.",
     ),
+  previousStepEvaluation: z
+    .string()
+    .describe(
+      "Previous step evaluation: Did you achieve the goal you set? What worked? What didn't work?",
+    ),
+  currentStepReasoning: z
+    .string()
+    .describe(
+      "Current step reasoning: What do you see? What's the current state? What needs to be done?",
+    ),
+  nextStepGoal: z
+    .string()
+    .describe(
+      "Next step goal: What specific, actionable goal do you plan to accomplish next?",
+    ),
 });
 export function createComputerTool({
   computerProvider,
 }: {
   computerProvider: ComputerProvider;
-}): Tool<
-  typeof computerToolSchema,
-  ComputerActionResult & { screenshot: string | URL }
-> & {
+}): Tool<typeof computerToolSchema> & {
   getCurrentUrl: (context: { sessionId: string }) => Promise<string>;
 } {
   return {
@@ -202,9 +214,19 @@ export function createComputerTool({
         sessionId: context.sessionId,
         step: context.step,
       });
+      // Add planning data to conversation history
+      const planningMessage = `[PLANNING - Step ${context.step}]
+        Previous Step Evaluation: ${args.previousStepEvaluation}
+        Current Step Reasoning: ${args.currentStepReasoning}
+        Next Step Goal: ${args.nextStepGoal}`;
+
       const response = {
         role: "user" as const,
         content: [
+          {
+            type: "text" as const,
+            text: planningMessage,
+          },
           {
             type: "text" as const,
             text: `Computer action on ${result.timestamp}, result: ${result.actionPerformed}. Reasoning: ${result.reasoning} Screenshot as attached.`,
@@ -226,6 +248,11 @@ export function createComputerTool({
           screenshot: {
             value: screenshotUrl?.url ?? screenshot,
             overrideLogScreenshot: true,
+          },
+          planningData: {
+            previousStepEvaluation: args.previousStepEvaluation,
+            currentStepReasoning: args.currentStepReasoning,
+            nextStepGoal: args.nextStepGoal,
           },
           response: {
             role: "user",

@@ -116,8 +116,12 @@ export function createAgent(options: {
 
           if (step > CONVERSATION_LOOK_BACK) {
             const task = conversationChunk.get(1);
-            if (task) {
-              relevantConversations.unshift([1, task]);
+            const initialTaskMessage = task?.filter(
+              (msg) => msg.role === "user",
+            );
+            if (initialTaskMessage?.length) {
+              // Only preserve the initial user task message, not assistant responses/planning from Step 1
+              relevantConversations.unshift([1, initialTaskMessage]);
             }
           }
 
