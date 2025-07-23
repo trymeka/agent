@@ -197,6 +197,8 @@ const computerToolSchema = z.object({
       "Next step goal: What specific, actionable goal do you plan to accomplish next?",
     ),
 });
+export type ComputerToolArgs = z.infer<typeof computerToolSchema>;
+
 export function createComputerTool<T>({
   computerProvider,
 }: {
