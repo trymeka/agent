@@ -6,6 +6,7 @@ import type {
   Tool,
 } from "@trymeka/core";
 import { parseComputerToolArgs } from "@trymeka/core/tools/computer";
+import type { Logger } from "@trymeka/core/utils/logger";
 import {
   type CoreMessage,
   type LanguageModel,
@@ -57,9 +58,11 @@ function toVercelTools<T extends z.ZodSchema>(
 
 export function createVercelAIProvider({
   model,
+  logger,
   ...vercelOptions
 }: {
   model: LanguageModel;
+  logger?: Logger;
 } & Pick<
   Parameters<typeof generateText>[0],
   | "topP"
@@ -103,7 +106,11 @@ export function createVercelAIProvider({
           if (!toolCallResult) {
             return null;
           }
-
+          logger?.info("[VercelAIProvider] Repairing tool call", {
+            toolCall,
+            toolCallResult,
+            parameterSchema,
+          });
           const result = await generateObject({
             model: model,
             schema: toolCallResult.schema,
@@ -115,6 +122,9 @@ export function createVercelAIProvider({
               "Please fix the arguments.",
             ].join("\n"),
             maxRetries: 3,
+          });
+          logger?.info("[VercelAIProvider] Repairing tool call result", {
+            output: result.object,
           });
           if (!result) {
             return null;
