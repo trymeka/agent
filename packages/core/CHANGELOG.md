@@ -1,5 +1,11 @@
 # @trymeka/core
 
+## 0.0.12
+
+### Patch Changes
+
+- bd97980: fix(ai-provider-vercel): update repair tool calling to better support computer action for claude
+
 ## 0.0.11
 
 ### Patch Changes
