@@ -1,12 +1,14 @@
 {
   "name": "@trymeka/ai-provider-vercel",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "type": "module",
   "publishConfig": {
     "access": "public"
   },
   "description": "TODO: Add description",
-  "keywords": ["trymeka"],
+  "keywords": [
+    "trymeka"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/trymeka/agent.git",
@@ -14,7 +16,11 @@
   },
   "license": "MIT",
   "homepage": "https://github.com/trymeka/agent/tree/main/packages/ai-provider-vercel#readme",
-  "files": ["dist", "!dist/**/*.map", "README.md"],
+  "files": [
+    "dist",
+    "!dist/**/*.map",
+    "README.md"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
