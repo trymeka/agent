@@ -279,6 +279,9 @@ export function createAgent<T>(options: {
               tools: allTools,
             })
             .catch((error) => {
+              logger.error("[Agent] AI provider failed to generate text", {
+                error: error.message,
+              });
               throw new AIProviderError("AI provider failed to generate text", {
                 cause: error,
               });
@@ -380,6 +383,9 @@ export function createAgent<T>(options: {
                 messages: conversationHistory,
               })
               .catch((error) => {
+                logger.error("[Agent] Error executing tool call", {
+                  error: error.message,
+                });
                 throw new ToolCallError(
                   `Error executing tool call: ${toolCall.toolName}`,
                   {
@@ -441,6 +447,9 @@ export function createAgent<T>(options: {
       const { liveUrl } = await computerProvider
         .start(sessionId)
         .catch((error) => {
+          logger.error("[Agent] Failed to start computer provider", {
+            error: error.message,
+          });
           throw new ComputerProviderError("Failed to start computer provider", {
             cause: error,
           });
