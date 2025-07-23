@@ -97,7 +97,11 @@ export function createScrapybaraComputerProvider(options: {
   screenSize?: { width: number; height: number };
   initialUrl?: string;
   logger?: Logger;
-}): ComputerProvider {
+}): ComputerProvider<{
+  browser: Browser;
+  page: Page;
+  instance: BrowserInstance;
+}> {
   const logger = options.logger ?? createNoOpLogger();
   const screenSize = options.screenSize ?? { width: 1600, height: 900 };
   const scrapybaraClient = new ScrapybaraClient({
@@ -109,6 +113,19 @@ export function createScrapybaraComputerProvider(options: {
     screenSize() {
       return Promise.resolve(screenSize);
     },
+    getInstance: async (sessionId: string) => {
+      const result = sessionMap.get(sessionId);
+      if (!result) {
+        throw new ComputerProviderError(
+          `No instance found for sessionId ${sessionId}. Call .start(sessionId) first.`,
+        );
+      }
+      const cdpUrl = (await result.instance.getCdpUrl()).cdpUrl;
+      const browser = await chromium.connectOverCDP(cdpUrl);
+      const page = getPage(browser, "Scrapybara");
+
+      return { browser, page, instance: result.instance };
+    },
     navigateTo: async (args: {
       sessionId: string;
       url: string;
@@ -117,7 +134,7 @@ export function createScrapybaraComputerProvider(options: {
       const result = sessionMap.get(sessionId);
       if (!result) {
         throw new ComputerProviderError(
-          `No instance found for sessionId ${sessionId}`,
+          `No instance found for sessionId ${sessionId}. Call .start(sessionId) first.`,
         );
       }
       const cdpUrl = (await result.instance.getCdpUrl()).cdpUrl;
@@ -132,7 +149,7 @@ export function createScrapybaraComputerProvider(options: {
       const result = sessionMap.get(sessionId);
       if (!result) {
         throw new ComputerProviderError(
-          `No instance found for sessionId ${sessionId}`,
+          `No instance found for sessionId ${sessionId}. Call .start(sessionId) first.`,
         );
       }
       const cdpUrl = (await result.instance.getCdpUrl()).cdpUrl;
@@ -179,7 +196,7 @@ export function createScrapybaraComputerProvider(options: {
       const result = sessionMap.get(sessionId);
       if (!result) {
         throw new ComputerProviderError(
-          `No instance found for sessionId ${sessionId}`,
+          `No instance found for sessionId ${sessionId}. Call .start(sessionId) first.`,
         );
       }
       await result.instance.stop();
@@ -190,7 +207,7 @@ export function createScrapybaraComputerProvider(options: {
       const result = sessionMap.get(sessionId);
       if (!result) {
         throw new ComputerProviderError(
-          `No instance found for sessionId ${sessionId}`,
+          `No instance found for sessionId ${sessionId}. Call .start(sessionId) first.`,
         );
       }
       const screenshot = await retryWithExponentialBackoff({
@@ -207,7 +224,7 @@ export function createScrapybaraComputerProvider(options: {
       const result = sessionMap.get(context.sessionId);
       if (!result) {
         throw new ComputerProviderError(
-          `No instance found for sessionId ${context.sessionId}`,
+          `No instance found for sessionId ${context.sessionId}. Call .start(sessionId) first. `,
         );
       }
       const { instance } = result;

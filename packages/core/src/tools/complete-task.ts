@@ -37,7 +37,15 @@ export function createCompleteTaskTool<T extends z.ZodSchema>({
       "Declare that the task is complete. This tool MUST be used to officially end the task. The task cannot be completed without calling this tool.",
     schema: completeTaskSchema,
     execute: async (args, context) => {
-      if (evaluator) {
+      const completionAttempts = context.messages.filter(
+        (message) =>
+          message.role === "assistant" &&
+          !!message.toolCalls?.find(
+            (toolCall) => toolCall.toolName === "complete_task",
+          ),
+      );
+      const forceComplete = completionAttempts.length > 3;
+      if (evaluator && !forceComplete) {
         const evaluationPrompt = `You are evaluating the quality and truthfulness of this task completion by cross-referencing the completion claims against the actual conversation history.
 
 ORIGINAL TASK: ${currentInstruction}

@@ -10,7 +10,7 @@ import { SYSTEM_PROMPT } from "./prompts/system";
 
 const sessionIdGenerator = () => `session_${crypto.randomUUID()}`;
 
-export function createAgent(options: {
+export function createAgent<T>(options: {
   aiProvider:
     | AIProvider
     | {
@@ -18,12 +18,21 @@ export function createAgent(options: {
         alternateGround?: AIProvider;
         evaluator?: AIProvider;
       };
-  computerProvider: ComputerProvider;
+  computerProvider: ComputerProvider<T>;
   logger?: Logger;
 }) {
   const { aiProvider, computerProvider, logger: loggerOverride } = options;
-  const { ground, evaluator, alternateGround } =
-    "ground" in aiProvider ? aiProvider : { ground: aiProvider };
+  const {
+    ground,
+    evaluator: baseEvaluator,
+    alternateGround,
+  } = "ground" in aiProvider ? aiProvider : { ground: aiProvider };
+  const evaluator: AIProvider | undefined =
+    baseEvaluator ??
+    // we default to the ground provider if no evaluator is provided.
+    // unless the evaluator is explicitly provided (could be undefined)
+    ("evaluator" in aiProvider ? aiProvider.evaluator : ground);
+
   const logger = loggerOverride ?? createNoOpLogger();
 
   const sessionMap = new Map<
@@ -270,6 +279,9 @@ export function createAgent(options: {
               tools: allTools,
             })
             .catch((error) => {
+              logger.error("[Agent] AI provider failed to generate text", {
+                error: error.message,
+              });
               throw new AIProviderError("AI provider failed to generate text", {
                 cause: error,
               });
@@ -308,7 +320,7 @@ export function createAgent(options: {
                 content: [
                   {
                     type: "text",
-                    text: "Please continue with the task or use the complete_task tool if you believe the task is complete and all requirements have been met.",
+                    text: "Please continue with the task with what you think is best. If you or the user believe the task is complete and all requirements have been met, use the complete_task tool.",
                   },
                 ],
               },
@@ -371,6 +383,9 @@ export function createAgent(options: {
                 messages: conversationHistory,
               })
               .catch((error) => {
+                logger.error("[Agent] Error executing tool call", {
+                  error: error.message,
+                });
                 throw new ToolCallError(
                   `Error executing tool call: ${toolCall.toolName}`,
                   {
@@ -432,6 +447,9 @@ export function createAgent(options: {
       const { liveUrl } = await computerProvider
         .start(sessionId)
         .catch((error) => {
+          logger.error("[Agent] Failed to start computer provider", {
+            error: error.message,
+          });
           throw new ComputerProviderError("Failed to start computer provider", {
             cause: error,
           });

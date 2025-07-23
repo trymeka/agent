@@ -132,10 +132,17 @@ export interface ComputerActionResult {
   reasoning: string;
   timestamp: string;
 }
-export interface ComputerProvider {
+export interface ComputerProvider<T> {
   getCurrentUrl(sessionId: string): Promise<string>;
   /** Takes a screenshot of the environment. */
   takeScreenshot(sessionId: string): Promise<string>; // Returns base64 image string
+
+  /**
+   * Returns the instance of the computer provider to allow for advanced interactions.
+   * @param sessionId - The session ID.
+   * @returns The instance of the computer provider.
+   */
+  getInstance(sessionId: string): Promise<T>;
 
   /** Uploads a screenshot and returns its public URL. */
   uploadScreenshot:
@@ -190,10 +197,10 @@ const computerToolSchema = z.object({
       "Next step goal: What specific, actionable goal do you plan to accomplish next?",
     ),
 });
-export function createComputerTool({
+export function createComputerTool<T>({
   computerProvider,
 }: {
-  computerProvider: ComputerProvider;
+  computerProvider: ComputerProvider<T>;
 }): Tool<typeof computerToolSchema> & {
   getCurrentUrl: (context: { sessionId: string }) => Promise<string>;
 } {
