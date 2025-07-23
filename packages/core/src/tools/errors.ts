@@ -17,5 +17,8 @@ export class ComputerProviderError extends Error {
   constructor(message: string, options?: { cause?: unknown }) {
     super(message, options);
     this.name = "ComputerProviderError";
+    if (typeof options?.cause === "object" && options.cause !== null) {
+      Error.captureStackTrace(options.cause);
+    }
   }
 }
