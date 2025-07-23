@@ -14,32 +14,24 @@ export function createAgent<T>(options: {
   aiProvider:
     | AIProvider
     | {
-        groundOptions: { base: AIProvider; alternate?: AIProvider };
-        evaluatorOptions?: { provider?: AIProvider; enabled: boolean };
+        ground: AIProvider;
+        alternateGround?: AIProvider;
+        evaluator?: AIProvider;
       };
   computerProvider: ComputerProvider<T>;
   logger?: Logger;
 }) {
   const { aiProvider, computerProvider, logger: loggerOverride } = options;
-  const { groundOptions, evaluatorOptions } =
-    "groundOptions" in aiProvider
-      ? {
-          ...aiProvider,
-          evaluatorOptions: aiProvider.evaluatorOptions ?? {
-            enabled: true,
-          },
-        }
-      : {
-          groundOptions: { base: aiProvider },
-          evaluatorOptions: {
-            enabled: true,
-          },
-        };
-  const ground = groundOptions.base;
-  const alternateGround = groundOptions.alternate;
-  const evaluator = !evaluatorOptions?.enabled
-    ? undefined
-    : (evaluatorOptions.provider ?? ground);
+  const {
+    ground,
+    evaluator: baseEvaluator,
+    alternateGround,
+  } = "ground" in aiProvider ? aiProvider : { ground: aiProvider };
+  const evaluator: AIProvider | undefined =
+    baseEvaluator ??
+    // we default to the ground provider if no evaluator is provided.
+    // unless the evaluator is explicitly provided (could be undefined)
+    ("evaluator" in aiProvider ? aiProvider.evaluator : ground);
 
   const logger = loggerOverride ?? createNoOpLogger();
 
