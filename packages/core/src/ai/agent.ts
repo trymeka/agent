@@ -317,7 +317,7 @@ export function createAgent<T>(options: {
                 content: [
                   {
                     type: "text",
-                    text: "Please continue with the task or use the complete_task tool if you believe the task is complete and all requirements have been met.",
+                    text: "Please continue with the task with what you think is best. If you or the user believe the task is complete and all requirements have been met, use the complete_task tool.",
                   },
                 ],
               },
