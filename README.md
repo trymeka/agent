@@ -12,11 +12,12 @@ The agent primarily focuses on web browsing today, and achieved state-of-the-art
 
 Read more about the details of the benchmark results here.
 
-## Quick Demo
 
-Check out a quick demo of this here: https://trymeka.com/demo
+## Demo
 
-(You will need to supply your own model and infra provider keys to use the demo.)
+Visit [trymeka/demo](https://github.com/trymeka/demo) for a functional demo.
+
+<img width="863" height="707" alt="Screenshot 2025-07-22 at 10 22 14 PM" src="https://github.com/user-attachments/assets/0b5df858-82da-4b6e-b153-542f00456455" />
 
 
 ## Getting Started
