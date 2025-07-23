@@ -14,16 +14,33 @@ export function createAgent<T>(options: {
   aiProvider:
     | AIProvider
     | {
-        ground: AIProvider;
-        alternateGround?: AIProvider;
-        evaluator?: AIProvider;
+        groundOptions: { base: AIProvider; alternate?: AIProvider };
+        evaluatorOptions?: { provider?: AIProvider; enabled: boolean };
       };
   computerProvider: ComputerProvider<T>;
   logger?: Logger;
 }) {
   const { aiProvider, computerProvider, logger: loggerOverride } = options;
-  const { ground, evaluator, alternateGround } =
-    "ground" in aiProvider ? aiProvider : { ground: aiProvider };
+  const { groundOptions, evaluatorOptions } =
+    "groundOptions" in aiProvider
+      ? {
+          ...aiProvider,
+          evaluatorOptions: aiProvider.evaluatorOptions ?? {
+            enabled: true,
+          },
+        }
+      : {
+          groundOptions: { base: aiProvider },
+          evaluatorOptions: {
+            enabled: true,
+          },
+        };
+  const ground = groundOptions.base;
+  const alternateGround = groundOptions.alternate;
+  const evaluator = !evaluatorOptions?.enabled
+    ? undefined
+    : (evaluatorOptions.provider ?? ground);
+
   const logger = loggerOverride ?? createNoOpLogger();
 
   const sessionMap = new Map<

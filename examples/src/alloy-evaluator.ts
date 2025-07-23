@@ -38,9 +38,14 @@ const computerProvider = createScrapybaraComputerProvider({
 });
 const agent = createAgent({
   aiProvider: {
-    ground: aiProvider,
-    alternateGround: aiProvider2,
-    evaluator: evaluator,
+    groundOptions: {
+      base: aiProvider,
+      alternate: aiProvider2,
+    },
+    evaluatorOptions: {
+      provider: evaluator,
+      enabled: true,
+    },
   },
   computerProvider,
   logger: console,
