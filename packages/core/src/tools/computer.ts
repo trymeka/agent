@@ -14,36 +14,38 @@ export const parseComputerToolArgs = (args: string) => {
     return { schema: computerActionSchema, args: null };
   }
   const baseSchema = z.object({
-    action: z.object({
-      type: z.string().describe("Type of action to perform"),
-    }),
+    action: z.string().describe("Type of action to perform"),
   });
 
   const result = baseSchema.safeParse(parsedArgs);
   if (!result.success) {
     return { schema: computerActionSchema, args: parsedArgs };
   }
-  const type = result.data.action.type;
-  switch (type) {
-    case "click":
-      return { schema: clickActionSchema, args: parsedArgs };
-    case "double_click":
-      return { schema: doubleClickActionSchema, args: parsedArgs };
-    case "drag":
-      return { schema: dragActionSchema, args: parsedArgs };
-    case "keypress":
-      return { schema: keypressActionSchema, args: parsedArgs };
-    case "move":
-      return { schema: moveActionSchema, args: parsedArgs };
-    case "scroll":
-      return { schema: scrollActionSchema, args: parsedArgs };
-    case "type":
-      return { schema: typeActionSchema, args: parsedArgs };
-    case "wait":
-      return { schema: waitActionSchema, args: parsedArgs };
-    default:
-      return null;
+  if (result.data.action.includes("click")) {
+    return { schema: clickActionSchema, args: parsedArgs };
   }
+  if (result.data.action.includes("double_click")) {
+    return { schema: doubleClickActionSchema, args: parsedArgs };
+  }
+  if (result.data.action.includes("drag")) {
+    return { schema: dragActionSchema, args: parsedArgs };
+  }
+  if (result.data.action.includes("keypress")) {
+    return { schema: keypressActionSchema, args: parsedArgs };
+  }
+  if (result.data.action.includes("move")) {
+    return { schema: moveActionSchema, args: parsedArgs };
+  }
+  if (result.data.action.includes("scroll")) {
+    return { schema: scrollActionSchema, args: parsedArgs };
+  }
+  if (result.data.action.includes("type")) {
+    return { schema: typeActionSchema, args: parsedArgs };
+  }
+  if (result.data.action.includes("wait")) {
+    return { schema: waitActionSchema, args: parsedArgs };
+  }
+  return null;
 };
 
 const clickActionSchema = z

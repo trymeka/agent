@@ -128,7 +128,7 @@ export function createVercelAIProvider({
               ].join("\n"),
               experimental_repairText: ({ text, error }) => {
                 logger?.info(
-                  "[VercelAIProvider] Error generating object for computer_action",
+                  "[VercelAIProvider] Error parsing text initially generated for computer_action",
                   {
                     text,
                     error,
