@@ -1,8 +1,15 @@
 export class AIProviderError extends Error {
   constructor(message: string, options?: { cause?: unknown }) {
-    super(message, options);
+    super(
+      `AIProviderError: ${message}. ${
+        options?.cause instanceof Error
+          ? options.cause.message
+          : String(options?.cause)
+      }`,
+      options,
+    );
     this.name = "AIProviderError";
-    if (typeof options?.cause === "object" && options.cause !== null) {
+    if (options?.cause instanceof Error) {
       Error.captureStackTrace(options.cause);
     }
   }
@@ -10,9 +17,16 @@ export class AIProviderError extends Error {
 
 export class AgentError extends Error {
   constructor(message: string, options?: { cause?: unknown }) {
-    super(message, options);
+    super(
+      `AgentError: ${message}. ${
+        options?.cause instanceof Error
+          ? options.cause.message
+          : String(options?.cause)
+      }`,
+      options,
+    );
     this.name = "AgentError";
-    if (typeof options?.cause === "object" && options.cause !== null) {
+    if (options?.cause instanceof Error) {
       Error.captureStackTrace(options.cause);
     }
   }

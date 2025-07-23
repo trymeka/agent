@@ -15,9 +15,16 @@ export class ToolCallError extends Error {
 
 export class ComputerProviderError extends Error {
   constructor(message: string, options?: { cause?: unknown }) {
-    super(message, options);
+    super(
+      `ComputerProviderError: ${message}. ${
+        options?.cause instanceof Error
+          ? options.cause.message
+          : String(options?.cause)
+      }`,
+      options,
+    );
     this.name = "ComputerProviderError";
-    if (typeof options?.cause === "object" && options.cause !== null) {
+    if (options?.cause instanceof Error) {
       Error.captureStackTrace(options.cause);
     }
   }
