@@ -14,35 +14,40 @@ export const parseComputerToolArgs = (args: string) => {
     return { schema: computerActionSchema, args: null };
   }
   const baseSchema = z.object({
-    action: z.string().describe("Type of action to perform"),
+    action: z.union([
+      z.string().describe("Type of action to perform"),
+      z.object({
+        type: z.string().describe("Type of action to perform"),
+      }),
+    ]),
   });
 
   const result = baseSchema.safeParse(parsedArgs);
   if (!result.success) {
     return { schema: computerActionSchema, args: parsedArgs };
   }
-  if (result.data.action.includes("click")) {
+  if (result.data.action.toString().includes("click")) {
     return { schema: clickActionSchema, args: parsedArgs };
   }
-  if (result.data.action.includes("double_click")) {
+  if (result.data.action.toString().includes("double_click")) {
     return { schema: doubleClickActionSchema, args: parsedArgs };
   }
-  if (result.data.action.includes("drag")) {
+  if (result.data.action.toString().includes("drag")) {
     return { schema: dragActionSchema, args: parsedArgs };
   }
-  if (result.data.action.includes("keypress")) {
+  if (result.data.action.toString().includes("keypress")) {
     return { schema: keypressActionSchema, args: parsedArgs };
   }
-  if (result.data.action.includes("move")) {
+  if (result.data.action.toString().includes("move")) {
     return { schema: moveActionSchema, args: parsedArgs };
   }
-  if (result.data.action.includes("scroll")) {
+  if (result.data.action.toString().includes("scroll")) {
     return { schema: scrollActionSchema, args: parsedArgs };
   }
-  if (result.data.action.includes("type")) {
+  if (result.data.action.toString().includes("type")) {
     return { schema: typeActionSchema, args: parsedArgs };
   }
-  if (result.data.action.includes("wait")) {
+  if (result.data.action.toString().includes("wait")) {
     return { schema: waitActionSchema, args: parsedArgs };
   }
   return null;
