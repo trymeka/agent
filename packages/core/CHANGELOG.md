@@ -1,5 +1,11 @@
 # @trymeka/core
 
+## 0.0.13
+
+### Patch Changes
+
+- 0a1d1f7: fix(core): update parsing of params for tool call
+
 ## 0.0.12
 
 ### Patch Changes
