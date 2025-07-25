@@ -116,13 +116,13 @@ export function createAgent<T>(options: {
           sessionId: string;
           currentLog: AgentLog;
           currentTask: Omit<Task<T>, "result">;
-        }) => void;
+        }) => void | Promise<void>;
         onComplete?: (args: {
           step: number;
           sessionId: string;
           result: z.infer<T>;
           currentTask: Omit<Task<T>, "result">;
-        }) => void;
+        }) => void | Promise<void>;
       }): Promise<Task<T>> => {
         const MAX_STEPS = task.maxSteps ?? 100;
         const CONVERSATION_LOOK_BACK = 7;
