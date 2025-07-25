@@ -61,7 +61,7 @@ const task = await session.runTask({
     "Tell me the full names of the repositories where I made contributions and they got the least stars?",
   initialUrl: "	http://3.149.163.222:8023",
 });
-console.log("Task:", JSON.stringify(task, null, 2));
+console.log("Task:", JSON.stringify(task.result, null, 2));
 
 await session.end();
 

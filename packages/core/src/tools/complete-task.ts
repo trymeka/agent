@@ -83,27 +83,29 @@ Respond with either an APPROVED or REFLECTION object based on your evaluation. F
         ];
 
         const evaluationResult = await evaluator.generateObject({
-          schema: z.union([
-            z.object({
-              type: z.literal("APPROVED"),
-              reason: z.string().describe("Reason for approval"),
-            }),
-            z.object({
-              type: z.literal("REFLECTION"),
-              reason: z.string().describe("Reason for reflection"),
-              reflectionForImprovement: z
-                .string()
-                .describe(
-                  "Specific feedback for improvement that the assistant should use to properly complete the task.",
-                ),
-            }),
-          ]),
+          schema: z.object({
+            approved: z
+              .object({
+                reason: z.string().describe("Reason for approval"),
+              })
+              .nullable(),
+            reflection: z
+              .object({
+                reason: z.string().describe("Reason for reflection"),
+                reflectionForImprovement: z
+                  .string()
+                  .describe(
+                    "Specific feedback for improvement that the assistant should use to properly complete the task.",
+                  ),
+              })
+              .nullable(),
+          }),
           messages: evaluationMessages,
         });
 
         // If evaluation indicates issues, provide reflection
-        if (evaluationResult.object.type === "REFLECTION") {
-          const rejectionText = `This task was determined to be incomplete. The reason is: ${evaluationResult.object.reason}. Please improve the task completion based on the following feedback: ${evaluationResult.object.reflectionForImprovement}`;
+        if (evaluationResult.object.reflection) {
+          const rejectionText = `This task was determined to be incomplete. The reason is: ${evaluationResult.object.reflection.reason}. Please improve the task completion based on the following feedback: ${evaluationResult.object.reflection.reflectionForImprovement}`;
           const response = {
             role: "user" as const,
             content: [
@@ -120,7 +122,7 @@ Respond with either an APPROVED or REFLECTION object based on your evaluation. F
               toolCallId: context.toolCallId,
               toolName: "complete_task",
               args,
-              reasoning: evaluationResult.object.reason,
+              reasoning: evaluationResult.object.reflection.reason,
               response,
             }),
           };

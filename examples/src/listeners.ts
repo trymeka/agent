@@ -47,7 +47,7 @@ const task = await session.runTask({
   }),
 });
 
-console.log("Task", JSON.stringify(task, null, 2));
+console.log("Task", JSON.stringify(task.result, null, 2));
 
 await session.end();
 const sessionDetails = session.get();
