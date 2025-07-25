@@ -142,14 +142,29 @@ export interface ComputerActionResult {
   reasoning: string;
   timestamp: string;
 }
-export interface ComputerProvider<T> {
+
+// biome-ignore lint/suspicious/noExplicitAny: user defined
+export interface ComputerProvider<T, R = Record<string, any>> {
+  /**
+   * Returns the current URL of the environment.
+   * @param sessionId - The session ID.
+   * @throws {ComputerProviderError} If the sessionId is invalid.
+   * @returns The current URL.
+   */
   getCurrentUrl(sessionId: string): Promise<string>;
-  /** Takes a screenshot of the environment. */
-  takeScreenshot(sessionId: string): Promise<string>; // Returns base64 image string
+
+  /**
+   * Takes a screenshot of the environment.
+   * @param sessionId - The session ID.
+   * @throws {ComputerProviderError} If the sessionId is invalid or if the screenshot cannot be taken.
+   * @returns The base64 image string.
+   */
+  takeScreenshot(sessionId: string): Promise<string>;
 
   /**
    * Returns the instance of the computer provider to allow for advanced interactions.
    * @param sessionId - The session ID.
+   * @throws {ComputerProviderError} If the sessionId is invalid.
    * @returns The instance of the computer provider.
    */
   getInstance(sessionId: string): Promise<T>;
@@ -162,6 +177,12 @@ export interface ComputerProvider<T> {
         step: number;
       }) => Promise<{ url: string }>)
     | undefined;
+
+  /**
+   * Navigates to a certain URL.
+   * @param args - The arguments for the navigation.
+   * @throws {ComputerProviderError} If the sessionId is invalid or if the navigation cannot be performed.
+   */
   navigateTo(args: { sessionId: string; url: string }): Promise<void>;
 
   /** Executes a standard computer action. */
@@ -174,11 +195,26 @@ export interface ComputerProvider<T> {
     },
   ): Promise<ComputerActionResult>;
 
-  /** Any necessary setup or teardown logic. */
-  start(sessionId: string): Promise<{
+  /**
+   * Starts a new session.
+   * @param sessionId - The session ID.
+   * @param options - The options for the session to be passed on to the underlying computer provider.
+   * @throws {ComputerProviderError} If the session cannot be started.
+   * @returns The computer provider ID and the live URL if available.
+   */
+  start(
+    sessionId: string,
+    options?: R | undefined,
+  ): Promise<{
     computerProviderId: string;
     liveUrl?: string;
   }>;
+
+  /**
+   * Stops the session.
+   * @param sessionId - The session ID.
+   * @throws {ComputerProviderError} If the session cannot be stopped or if sessionId is invalid.
+   */
   stop(sessionId: string): Promise<void>;
 
   screenSize(): Promise<{ width: number; height: number }>;

@@ -97,11 +97,14 @@ export function createScrapybaraComputerProvider(options: {
   screenSize?: { width: number; height: number };
   initialUrl?: string;
   logger?: Logger;
-}): ComputerProvider<{
-  browser: Browser;
-  page: Page;
-  instance: BrowserInstance;
-}> {
+}): ComputerProvider<
+  {
+    browser: Browser;
+    page: Page;
+    instance: BrowserInstance;
+  },
+  ScrapybaraClient.RequestOptions
+> {
   const logger = options.logger ?? createNoOpLogger();
   const screenSize = options.screenSize ?? { width: 1600, height: 900 };
   const scrapybaraClient = new ScrapybaraClient({
@@ -157,11 +160,15 @@ export function createScrapybaraComputerProvider(options: {
       const page = getPage(browser, "Scrapybara");
       return page.url();
     },
-    async start(sessionId: string) {
+    async start(
+      sessionId: string,
+      browserOptions: ScrapybaraClient.RequestOptions,
+    ) {
       logger.info("[ComputerProvider] Starting up scrapybara instance");
       const instance = await scrapybaraClient.startBrowser({
         timeoutHours: 1,
         resolution: [screenSize.width, screenSize.height],
+        ...browserOptions,
       });
 
       logger.info("[ComputerProvider] instance started", {

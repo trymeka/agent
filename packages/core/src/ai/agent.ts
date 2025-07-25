@@ -111,13 +111,13 @@ export function createAgent<T>(options: {
         // biome-ignore lint/suspicious/noExplicitAny: user defined
         customTools?: Record<string, Tool<z.ZodSchema, any>>;
         maxSteps?: number;
-        onStep?: (args: {
+        onStepComplete?: (args: {
           step: number;
           sessionId: string;
           currentLog: AgentLog;
           currentTask: Omit<Task<T>, "result">;
         }) => void | Promise<void>;
-        onComplete?: (args: {
+        onTaskComplete?: (args: {
           step: number;
           sessionId: string;
           result: z.infer<T>;
@@ -449,8 +449,8 @@ export function createAgent<T>(options: {
               currentTask.result = result.output;
               currentSession.status = "idle";
               currentTask.logs.push(agentLog);
-              if (task.onComplete) {
-                task.onComplete({
+              if (task.onTaskComplete) {
+                task.onTaskComplete({
                   step,
                   sessionId,
                   result: result.output,
@@ -469,8 +469,8 @@ export function createAgent<T>(options: {
           }
 
           currentTask.logs.push(agentLog);
-          if (task.onStep) {
-            task.onStep({
+          if (task.onStepComplete) {
+            task.onStepComplete({
               step,
               sessionId,
               currentLog: agentLog,
