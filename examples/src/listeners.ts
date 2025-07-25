@@ -1,28 +1,25 @@
-import { createAnthropic } from "@ai-sdk/anthropic";
+import { createOpenAI } from "@ai-sdk/openai";
 import { createVercelAIProvider } from "@trymeka/ai-provider-vercel";
 import { createScrapybaraComputerProvider } from "@trymeka/computer-provider-scrapybara";
 import { createAgent } from "@trymeka/core/ai/agent";
 import { z } from "zod";
 
-/**
- * This example shows how to use the Anthropic model to run a task.
- */
-
 if (!process.env.SCRAPYBARA_API_KEY) {
   throw new Error("SCRAPYBARA_API_KEY is not set");
 }
 
-if (!process.env.ANTHROPIC_API_KEY) {
-  throw new Error("ANTHROPIC_API_KEY is not set");
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error("OPENAI_API_KEY is not set");
 }
 
 const aiProvider = createVercelAIProvider({
-  model: createAnthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY,
-  })("claude-4-sonnet-20250514"),
+  model: createOpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  })("o3"),
 });
 const computerProvider = createScrapybaraComputerProvider({
   apiKey: process.env.SCRAPYBARA_API_KEY,
+  initialUrl: "https://news.ycombinator.com",
 });
 const agent = createAgent({
   aiProvider,
@@ -31,32 +28,39 @@ const agent = createAgent({
 });
 
 const session = await agent.initializeSession();
-console.log("session created", session);
 const task = await session.runTask({
-  instructions: "Search hacker news for the latest 5 news.",
-  initialUrl: "https://news.ycombinator.com/news",
+  instructions: "Summarize the top 3 articles",
+  onStep: (args) => {
+    console.log("Step", JSON.stringify(args, null, 2));
+  },
+  onComplete: (args) => {
+    console.log("Complete", JSON.stringify(args, null, 2));
+  },
   outputSchema: z.object({
-    newsHeadlines: z.array(z.string()),
+    articles: z.array(
+      z.object({
+        title: z.string(),
+        url: z.string(),
+        summary: z.string(),
+      }),
+    ),
   }),
 });
 
-console.log("Task:", JSON.stringify(task.result, null, 2));
+console.log("Task", JSON.stringify(task.result, null, 2));
 
 await session.end();
 const sessionDetails = session.get();
 if (!sessionDetails) {
   throw new Error("Session details are undefined");
 }
-
-console.log("session details", {
-  status: sessionDetails.status,
-  liveUrl: sessionDetails.liveUrl,
-  tasks: sessionDetails.tasks.map((task) => {
+console.log(
+  "session details",
+  sessionDetails.tasks.map((task) => {
     return {
       logs: JSON.stringify(task.logs, null, 2),
       result: task.result,
     };
   }),
-});
-
+);
 process.exit(0);

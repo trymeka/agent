@@ -111,12 +111,12 @@ export function createVercelAIProvider({
           });
           if (toolCall.toolName === "computer_action") {
             const toolCallResult = parseComputerToolArgs(toolCall.args);
-            if (!toolCallResult) {
-              return null;
-            }
             logger?.info("[VercelAIProvider] Computer action tool call", {
               toolCallResult,
             });
+            if (!toolCallResult) {
+              return null;
+            }
 
             const result = await generateObject({
               model: model,
@@ -228,6 +228,13 @@ export function createVercelAIProvider({
         messages: toCoreMessages(options.messages ?? []),
         maxRetries: 3,
         ...vercelOptions,
+        experimental_repairText: ({ text, error }) => {
+          logger?.warn("[VercelAIProvider] Error generating object", {
+            text,
+            error,
+          });
+          return Promise.resolve(text);
+        },
       });
       return {
         object: result.object as z.infer<T>,

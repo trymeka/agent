@@ -4,6 +4,9 @@ import { createAgentLogUpdate } from "../utils/agent-log";
 
 export const parseComputerToolArgs = (args: string) => {
   const parsedArgs = (() => {
+    if (typeof args === "object") {
+      return args;
+    }
     try {
       return JSON.parse(args);
     } catch {

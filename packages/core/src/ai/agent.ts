@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { AIProvider, AgentLog, AgentMessage } from ".";
+import type { AIProvider, AgentLog, AgentMessage, Session, Task } from ".";
 import { type Tool, createCompleteTaskTool } from "../tools";
 import { type ComputerProvider, createComputerTool } from "../tools/computer";
 import { ComputerProviderError, ToolCallError } from "../tools/errors";
@@ -10,6 +10,44 @@ import { SYSTEM_PROMPT } from "./prompts/system";
 
 const sessionIdGenerator = () => `session_${crypto.randomUUID()}`;
 
+/**
+ *@example
+ * ```ts
+ * const agent = createAgent({
+ *   aiProvider: createVercelAIProvider({
+ *     model: createOpenAI({
+ *       apiKey: process.env.OPENAI_API_KEY,
+ *     })("o3"),
+ *   }),
+ *   computerProvider: createScrapybaraComputerProvider({
+ *     apiKey: process.env.SCRAPYBARA_API_KEY,
+ *   }),
+ * });
+ * const session = await agent.initializeSession();
+ * const task = await session.runTask({
+ *   instructions: "Summarize the top 3 articles",
+ *   outputSchema: z.object({
+ *     articles: z.array(z.object({
+ *       title: z.string(),
+ *       url: z.string(),
+ *       summary: z.string(),
+ *     })),
+ *   }),
+ *   initialUrl: "https://news.ycombinator.com",
+ * });
+ * console.log(task);
+ * ```
+ *
+ * Creates an agent that can be used to run tasks.
+ * @param {Object} options - The options for the agent.
+ * @param {AIProvider | { ground: AIProvider; alternateGround?: AIProvider; evaluator?: AIProvider; }} options.aiProvider - The AI provider to use for the agent.
+ * @param {ComputerProvider} options.computerProvider - The computer provider to use for the agent.
+ * @param {Logger | undefined} [options.logger] - The logger to use for the agent.
+ * @param {number} [options.maxSteps] - The maximum number of steps to take for a task.
+ * @param {number} [options.conversationLookBack] - The number of steps to look back for the conversation history.
+ *
+ * @returns A session manager that can be used to start tasks.
+ */
 export function createAgent<T>(options: {
   aiProvider:
     | AIProvider
@@ -35,20 +73,7 @@ export function createAgent<T>(options: {
 
   const logger = loggerOverride ?? createNoOpLogger();
 
-  const sessionMap = new Map<
-    string,
-    {
-      id: string;
-      liveUrl: string;
-      status: "queued" | "running" | "idle" | "stopped";
-      tasks: {
-        instructions: string;
-        result: unknown;
-        logs: AgentLog[];
-        initialUrl: string | undefined;
-      }[];
-    }
-  >();
+  const sessionMap = new Map<string, Session>();
 
   function createSession(sessionId: string) {
     return {
@@ -65,10 +90,17 @@ export function createAgent<T>(options: {
         });
         await computerProvider.stop(sessionId);
       },
-      get: () => {
+      getTask: (taskId: string) => {
         const currentSession = sessionMap.get(sessionId);
         if (!currentSession) {
           throw new AgentError(`Session not found for sessionId: ${sessionId}`);
+        }
+        return currentSession.tasks.find((task) => task.id === taskId);
+      },
+      get: () => {
+        const currentSession = sessionMap.get(sessionId);
+        if (!currentSession) {
+          return undefined;
         }
         return currentSession;
       },
@@ -79,7 +111,19 @@ export function createAgent<T>(options: {
         // biome-ignore lint/suspicious/noExplicitAny: user defined
         customTools?: Record<string, Tool<z.ZodSchema, any>>;
         maxSteps?: number;
-      }): Promise<{ result: z.infer<T> }> => {
+        onStep?: (args: {
+          step: number;
+          sessionId: string;
+          currentLog: AgentLog;
+          currentTask: Omit<Task<T>, "result">;
+        }) => void;
+        onComplete?: (args: {
+          step: number;
+          sessionId: string;
+          result: z.infer<T>;
+          currentTask: Omit<Task<T>, "result">;
+        }) => void;
+      }): Promise<Task<T>> => {
         const MAX_STEPS = task.maxSteps ?? 100;
         const CONVERSATION_LOOK_BACK = 7;
 
@@ -195,17 +239,14 @@ export function createAgent<T>(options: {
           throw new AgentError(`Session not found for sessionId: ${sessionId}`);
         }
         currentSession.status = "running";
-        const currentTask: {
-          instructions: string;
-          result: unknown;
-          logs: AgentLog[];
-          initialUrl: string | undefined;
-        } = {
-          instructions: task.instructions,
-          logs: [],
-          result: undefined,
-          initialUrl: task.initialUrl,
-        };
+        const currentTask: Omit<Task<T>, "result"> & { result: T | undefined } =
+          {
+            id: crypto.randomUUID(),
+            instructions: task.instructions,
+            logs: [],
+            result: undefined,
+            initialUrl: task.initialUrl,
+          };
         currentSession.tasks.push(currentTask);
 
         logger.info("[Agent] Starting task execution", {
@@ -407,7 +448,17 @@ export function createAgent<T>(options: {
             if (result.type === "completion") {
               currentTask.result = result.output;
               currentSession.status = "idle";
-              return { result: result.output };
+              currentTask.logs.push(agentLog);
+              if (task.onComplete) {
+                task.onComplete({
+                  step,
+                  sessionId,
+                  result: result.output,
+                  currentTask: currentTask,
+                });
+              }
+
+              return currentTask as Task<T>;
             }
 
             // Update agent log for this step
@@ -418,6 +469,14 @@ export function createAgent<T>(options: {
           }
 
           currentTask.logs.push(agentLog);
+          if (task.onStep) {
+            task.onStep({
+              step,
+              sessionId,
+              currentLog: agentLog,
+              currentTask: currentTask,
+            });
+          }
           ++step;
         }
 
