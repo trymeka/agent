@@ -50,6 +50,8 @@ export function createAnchorBrowserComputerProvider(options: {
   {
     browser: Browser;
     page: Page;
+    liveUrl: string | undefined;
+    anchorSessionId: string | undefined;
   },
   {
     session: {
@@ -120,7 +122,7 @@ export function createAnchorBrowserComputerProvider(options: {
   const screenSize = options.screenSize ?? { width: 1600, height: 900 };
   const sessionMap = new Map<
     string,
-    { browser: Browser; page: Page; anchorSessionId?: string }
+    { browser: Browser; page: Page; anchorSessionId?: string; liveUrl?: string }
   >();
 
   return {
@@ -134,7 +136,12 @@ export function createAnchorBrowserComputerProvider(options: {
           `No instance found for sessionId ${sessionId}. Call .start(sessionId) first.`,
         );
       }
-      return Promise.resolve({ browser: result.browser, page: result.page });
+      return Promise.resolve({
+        browser: result.browser,
+        page: result.page,
+        liveUrl: result.liveUrl,
+        anchorSessionId: result.anchorSessionId,
+      });
     },
 
     async start(sessionId, browserOptions) {
@@ -182,9 +189,14 @@ export function createAnchorBrowserComputerProvider(options: {
           `[ComputerProvider] Successfully navigated to initial url ${options.initialUrl}`,
         );
       }
-      sessionMap.set(sessionId, { browser, page, anchorSessionId });
+      sessionMap.set(sessionId, {
+        browser,
+        page,
+        anchorSessionId,
+        liveUrl: anchorSession.data.live_view_url,
+      });
       return {
-        computerProviderId: sessionId,
+        computerProviderId: anchorSession.data.id,
         liveUrl: anchorSession.data.live_view_url,
       };
     },

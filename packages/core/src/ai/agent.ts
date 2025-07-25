@@ -86,7 +86,8 @@ export function createAgent<T>(options: {
         sessionMap.set(sessionId, {
           ...currentSession,
           status: "stopped",
-          liveUrl: "",
+          liveUrl: undefined,
+          computerProviderId: undefined,
         });
         await computerProvider.stop(sessionId);
       },
@@ -499,11 +500,12 @@ export function createAgent<T>(options: {
       const sessionId = sessionIdOverride ?? sessionIdGenerator();
       sessionMap.set(sessionId, {
         id: sessionId,
-        liveUrl: "",
+        liveUrl: undefined,
+        computerProviderId: "",
         tasks: [],
         status: "queued",
       });
-      const { liveUrl } = await computerProvider
+      const { liveUrl, computerProviderId } = await computerProvider
         .start(sessionId)
         .catch((error) => {
           logger.error("[Agent] Failed to start computer provider", {
@@ -515,7 +517,8 @@ export function createAgent<T>(options: {
         });
       sessionMap.set(sessionId, {
         id: sessionId,
-        liveUrl: liveUrl ?? "",
+        liveUrl: liveUrl,
+        computerProviderId,
         tasks: [],
         status: "idle",
       });

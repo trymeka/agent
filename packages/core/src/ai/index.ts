@@ -96,7 +96,8 @@ export interface Task<T = unknown> {
  */
 export interface Session {
   id: string;
-  liveUrl: string;
+  computerProviderId: string | undefined;
+  liveUrl: string | undefined;
   status: "queued" | "running" | "idle" | "stopped";
   tasks: Task[];
 }
