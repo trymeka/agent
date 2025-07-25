@@ -34,6 +34,12 @@ const agent = createAgent({
 const session = await agent.initializeSession();
 const task = await session.runTask({
   instructions: "Summarize the top 3 articles",
+  onStep: (args) => {
+    console.log("Step", JSON.stringify(args, null, 2));
+  },
+  onComplete: (args) => {
+    console.log("Complete", JSON.stringify(args, null, 2));
+  },
   outputSchema: z.object({
     articles: z.array(
       z.object({
