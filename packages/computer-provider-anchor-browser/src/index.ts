@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer";
+import { writeFileSync } from "node:fs";
 import {
   type ComputerAction,
   type ComputerActionResult,
@@ -36,6 +37,44 @@ const CUA_KEY_TO_PLAYWRIGHT_KEY: Record<string, string> = {
   win: "Meta",
 };
 
+const createAnchorClient =
+  (apiKey: string) =>
+  async ({
+    anchorId,
+    path,
+    body,
+    method = "POST",
+  }: {
+    anchorId: string;
+    path: `/${string}`;
+    body?: Record<string, unknown>;
+    method?: "POST" | "GET" | "DELETE" | "PUT";
+  }) => {
+    if (method !== "GET" && !body) {
+      throw new ComputerProviderError(`Body is required for method ${method}`);
+    }
+    const response = await fetch(
+      `https://api.anchorbrowser.io/v1/sessions/${anchorId}${path}`,
+      {
+        method,
+        headers: {
+          "anchor-api-key": apiKey,
+          "Content-Type": "application/json",
+        },
+        body: method === "GET" ? null : JSON.stringify(body),
+      },
+    );
+    if (!response.ok) {
+      const error = (await response.json()) as {
+        error: { code: number; message: string };
+      };
+      throw new ComputerProviderError(
+        `Failed to perform ${method} ${path}: ${error.error.code} ${error.error.message}`,
+      );
+    }
+    return response;
+  };
+
 export function createAnchorBrowserComputerProvider(options: {
   apiKey: string;
   uploadScreenshot?: (options: {
@@ -55,7 +94,7 @@ export function createAnchorBrowserComputerProvider(options: {
   },
   {
     session: {
-      initialUrl?: string;
+      initial_url?: string;
       recording?: {
         active: boolean;
       };
@@ -122,8 +161,15 @@ export function createAnchorBrowserComputerProvider(options: {
   const screenSize = options.screenSize ?? { width: 1600, height: 900 };
   const sessionMap = new Map<
     string,
-    { browser: Browser; page: Page; anchorSessionId?: string; liveUrl?: string }
+    {
+      browser: Browser;
+      page: Page;
+      anchorSessionId: string;
+      liveUrl: string;
+    }
   >();
+
+  const anchorClient = createAnchorClient(options.apiKey);
 
   return {
     screenSize() {
@@ -149,7 +195,22 @@ export function createAnchorBrowserComputerProvider(options: {
 
       const response = await fetch("https://api.anchorbrowser.io/v1/sessions", {
         method: "POST",
-        body: JSON.stringify(browserOptions),
+        body: JSON.stringify({
+          ...browserOptions,
+          session: {
+            ...browserOptions?.session,
+            initial_url:
+              browserOptions?.session?.initial_url ?? options.initialUrl,
+          },
+          browser: {
+            ...browserOptions?.browser,
+            viewport: {
+              width: screenSize.width,
+              height: screenSize.height,
+              ...browserOptions?.browser?.viewport,
+            },
+          },
+        }),
         headers: {
           "anchor-api-key": options.apiKey,
           "Content-Type": "application/json",
@@ -172,12 +233,9 @@ export function createAnchorBrowserComputerProvider(options: {
           live_view_url: string;
         };
       };
-      console.log("anchorSession", anchorSession.data);
       const anchorSessionId = anchorSession.data.id;
 
-      const browser = await chromium.connectOverCDP(
-        `wss://connect.anchorbrowser.io?apiKey=${options.apiKey}&sessionId=${sessionId}`,
-      );
+      const browser = await chromium.connectOverCDP(anchorSession.data.cdp_url);
       const page = await browser.newPage();
       page.on("dialog", () => {
         // Note that we neither need to accept nor dismiss the dialog here.
@@ -208,23 +266,12 @@ export function createAnchorBrowserComputerProvider(options: {
         );
       }
       await result.browser.close();
-      const response = await fetch(
-        `https://api.anchorbrowser.io/v1/sessions/${result.anchorSessionId}`,
-        {
-          method: "DELETE",
-          headers: {
-            "anchor-api-key": options.apiKey,
-          },
-        },
-      );
-      if (!response.ok) {
-        const error = (await response.json()) as {
-          error: { code: number; message: string };
-        };
-        throw new ComputerProviderError(
-          `Failed to stop anchor browser instance: ${error.error.code} ${error.error.message}`,
-        );
-      }
+      await anchorClient({
+        anchorId: result.anchorSessionId,
+        path: "/",
+        body: {},
+        method: "DELETE",
+      });
       sessionMap.delete(sessionId);
     },
     navigateTo: async (args: { sessionId: string; url: string }) => {
@@ -256,22 +303,16 @@ export function createAnchorBrowserComputerProvider(options: {
           `No instance found for sessionId ${sessionId}. Call .start(sessionId) first.`,
         );
       }
-      const response = await fetch(
-        `https://api.anchorbrowser.io/v1/sessions/${result.anchorSessionId}/screenshot`,
-        {
-          method: "GET",
-          headers: {
-            "anchor-api-key": options.apiKey,
-          },
-        },
-      );
-      if (!response.ok) {
-        throw new ComputerProviderError(
-          `Failed to take screenshot: ${response.statusText}`,
-        );
-      }
+      const response = await anchorClient({
+        anchorId: result.anchorSessionId,
+        path: "/screenshot",
+        method: "GET",
+      });
+
       const screenshot = await response.arrayBuffer();
-      return Buffer.from(screenshot).toString("base64");
+      const b64 = Buffer.from(screenshot).toString("base64");
+      writeFileSync("screenshot.png", Buffer.from(screenshot));
+      return b64;
     },
     async performAction(
       action: ComputerAction,
@@ -288,22 +329,16 @@ export function createAnchorBrowserComputerProvider(options: {
       switch (action.type) {
         case "click": {
           const { x, y, button = "left" } = action;
-          const response = await fetch(
-            `https://api.anchorbrowser.io/v1/sessions/${result.anchorSessionId}/mouse/click`,
-            {
-              method: "POST",
-              body: JSON.stringify({
-                x,
-                y,
-                button: button === "wheel" ? "wheel" : button,
-              }),
+          await anchorClient({
+            anchorId: result.anchorSessionId,
+            path: "/mouse/click",
+            body: {
+              x,
+              y,
+              button: button === "wheel" ? "middle" : button,
             },
-          );
-          if (!response.ok) {
-            throw new ComputerProviderError(
-              `Failed to click: ${response.statusText}`,
-            );
-          }
+          });
+
           return {
             type: "click",
             actionPerformed: `Clicked (button: ${button}) at position (${x}, ${y})`,
@@ -315,18 +350,11 @@ export function createAnchorBrowserComputerProvider(options: {
         }
         case "double_click": {
           const { x, y } = action;
-          const response = await fetch(
-            `https://api.anchorbrowser.io/v1/sessions/${result.anchorSessionId}/mouse/doubleClick`,
-            {
-              method: "POST",
-              body: JSON.stringify({ x, y, button: "left" }),
-            },
-          );
-          if (!response.ok) {
-            throw new ComputerProviderError(
-              `Failed to double-click: ${response.statusText}`,
-            );
-          }
+          await anchorClient({
+            anchorId: result.anchorSessionId,
+            path: "/mouse/doubleClick",
+            body: { x, y, button: "left" },
+          });
           return {
             type: "double_click",
             actionPerformed: `Double-clicked at position (${x}, ${y})`,
@@ -337,26 +365,17 @@ export function createAnchorBrowserComputerProvider(options: {
         }
         case "scroll": {
           const { x, y, scroll_x: scrollX, scroll_y: scrollY } = action;
-          const response = await fetch(
-            `https://api.anchorbrowser.io/v1/sessions/${result.anchorSessionId}/scroll`,
-            {
-              method: "POST",
-              body: JSON.stringify({
-                x,
-                y,
-                deltaX: scrollX,
-                deltaY: scrollY,
-              }),
+          await anchorClient({
+            anchorId: result.anchorSessionId,
+            path: "/scroll",
+            body: {
+              x,
+              y,
+              deltaX: scrollX,
+              deltaY: scrollY,
             },
-          );
-          if (!response.ok) {
-            const error = (await response.json()) as {
-              error: { code: number; message: string };
-            };
-            throw new ComputerProviderError(
-              `Failed to scroll: ${error.error.code} ${error.error.message}`,
-            );
-          }
+          });
+
           return {
             type: "scroll",
             actionPerformed: `Scrolled by (scrollX=${scrollX}, scrollY=${scrollY}) at mouse position (${x},${y})`,
@@ -368,27 +387,17 @@ export function createAnchorBrowserComputerProvider(options: {
         }
         case "keypress": {
           const { keys } = action;
-          const response = await fetch(
-            `https://api.anchorbrowser.io/v1/sessions/${result.anchorSessionId}/keyboard/shortcut`,
-            {
-              method: "POST",
-              body: JSON.stringify({
-                keys: keys.map(
-                  (k) =>
-                    CUA_KEY_TO_PLAYWRIGHT_KEY[k.toLowerCase()] ??
-                    k.toLowerCase(),
-                ),
-              }),
+          await anchorClient({
+            anchorId: result.anchorSessionId,
+            path: "/keyboard/shortcut",
+            body: {
+              keys: keys.map(
+                (k) =>
+                  CUA_KEY_TO_PLAYWRIGHT_KEY[k.toLowerCase()] ?? k.toLowerCase(),
+              ),
             },
-          );
-          if (!response.ok) {
-            const error = (await response.json()) as {
-              error: { code: number; message: string };
-            };
-            throw new ComputerProviderError(
-              `Failed to press keys: ${error.error.code} ${error.error.message}`,
-            );
-          }
+          });
+
           return {
             type: "keypress",
             actionPerformed: `Pressed keys: ${keys.join("+")}`,
@@ -398,22 +407,13 @@ export function createAnchorBrowserComputerProvider(options: {
         }
         case "type": {
           const { text } = action;
-          const response = await fetch(
-            `https://api.anchorbrowser.io/v1/sessions/${result.anchorSessionId}/keyboard/type`,
-            {
-              method: "POST",
-              // TODO: 30ms delay between each keypress to mimic human typing and prevent bot detection. Might need to be adjusted/exposed
-              body: JSON.stringify({ text, delay: 30 }),
-            },
-          );
-          if (!response.ok) {
-            const error = (await response.json()) as {
-              error: { code: number; message: string };
-            };
-            throw new ComputerProviderError(
-              `Failed to type text: ${error.error.code} ${error.error.message}`,
-            );
-          }
+          await anchorClient({
+            anchorId: result.anchorSessionId,
+            path: "/keyboard/type",
+            // TODO: 30ms delay between each keypress to mimic human typing and prevent bot detection. Might need to be adjusted/exposed
+            body: { text, delay: 30 },
+          });
+
           return {
             type: "type",
             actionPerformed: `Typed text: ${text}`,
@@ -447,27 +447,18 @@ export function createAnchorBrowserComputerProvider(options: {
             );
           }
 
-          const response = await fetch(
-            `https://api.anchorbrowser.io/v1/sessions/${result.anchorSessionId}/drag-and-drop`,
-            {
-              method: "POST",
-              body: JSON.stringify({
-                startX: firstPoint.x,
-                startY: firstPoint.y,
-                endX: lastPoint.x,
-                endY: lastPoint.y,
-                button: "left",
-              }),
+          await anchorClient({
+            anchorId: result.anchorSessionId,
+            path: "/drag-and-drop",
+            body: {
+              startX: firstPoint.x,
+              startY: firstPoint.y,
+              endX: lastPoint.x,
+              endY: lastPoint.y,
+              button: "left",
             },
-          );
-          if (!response.ok) {
-            const error = (await response.json()) as {
-              error: { code: number; message: string };
-            };
-            throw new ComputerProviderError(
-              `Failed to drag mouse: ${error.error.code} ${error.error.message}`,
-            );
-          }
+          });
+
           return {
             type: "drag",
             actionPerformed: `Dragged mouse from (${firstPoint?.x},${firstPoint?.y}) to (${lastPoint?.x},${lastPoint?.y})`,
@@ -479,21 +470,12 @@ export function createAnchorBrowserComputerProvider(options: {
         }
         case "move": {
           const { x, y } = action;
-          const response = await fetch(
-            `https://api.anchorbrowser.io/v1/sessions/${result.anchorSessionId}/mouse/move`,
-            {
-              method: "POST",
-              body: JSON.stringify({ x, y }),
-            },
-          );
-          if (!response.ok) {
-            const error = (await response.json()) as {
-              error: { code: number; message: string };
-            };
-            throw new ComputerProviderError(
-              `Failed to move mouse: ${error.error.code} ${error.error.message}`,
-            );
-          }
+          await anchorClient({
+            anchorId: result.anchorSessionId,
+            path: "/mouse/move",
+            body: { x, y },
+          });
+
           return {
             type: "move",
             actionPerformed: `Moved mouse to (${x}, ${y})`,

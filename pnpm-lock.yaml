@@ -50,6 +50,9 @@ importers:
       '@trymeka/ai-provider-vercel':
         specifier: workspace:*
         version: link:../packages/ai-provider-vercel
+      '@trymeka/computer-provider-anchor-browser':
+        specifier: workspace:*
+        version: link:../packages/computer-provider-anchor-browser
       '@trymeka/computer-provider-scrapybara':
         specifier: workspace:*
         version: link:../packages/computer-provider-scrapybara
