@@ -31,7 +31,7 @@ const agent = createAgent({
 });
 
 const session = await agent.initializeSession();
-console.log("session created", session);
+console.log("session live url", session.get()?.liveUrl);
 const task = await session.runTask({
   instructions: "Search hacker news for the latest 5 news.",
   initialUrl: "https://news.ycombinator.com/news",
@@ -43,20 +43,4 @@ const task = await session.runTask({
 console.log("Task:", JSON.stringify(task.result, null, 2));
 
 await session.end();
-const sessionDetails = session.get();
-if (!sessionDetails) {
-  throw new Error("Session details are undefined");
-}
-
-console.log("session details", {
-  status: sessionDetails.status,
-  liveUrl: sessionDetails.liveUrl,
-  tasks: sessionDetails.tasks.map((task) => {
-    return {
-      logs: JSON.stringify(task.logs, null, 2),
-      result: task.result,
-    };
-  }),
-});
-
 process.exit(0);

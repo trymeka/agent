@@ -1,6 +1,6 @@
-import { createOpenAI } from "@ai-sdk/openai";
+import { createAnthropic } from "@ai-sdk/anthropic";
 import { createVercelAIProvider } from "@trymeka/ai-provider-vercel";
-import { createScrapybaraComputerProvider } from "@trymeka/computer-provider-scrapybara";
+import { createAnchorBrowserComputerProvider } from "@trymeka/computer-provider-anchor-browser";
 import { createAgent } from "@trymeka/core/ai/agent";
 import { z } from "zod";
 
@@ -8,22 +8,20 @@ import { z } from "zod";
  * This example shows how to use the Anthropic model to run a task.
  */
 
-if (!process.env.SCRAPYBARA_API_KEY) {
-  throw new Error("SCRAPYBARA_API_KEY is not set");
+if (!process.env.ANCHOR_BROWSER_API_KEY) {
+  throw new Error("ANCHOR_BROWSER_API_KEY is not set");
 }
-
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error("OPENAI_API_KEY is not set");
+if (!process.env.ANTHROPIC_API_KEY) {
+  throw new Error("ANTHROPIC_API_KEY is not set");
 }
 
 const aiProvider = createVercelAIProvider({
-  model: createOpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-  })("o3"),
+  model: createAnthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY,
+  })("claude-4-sonnet-20250514"),
 });
-const computerProvider = createScrapybaraComputerProvider({
-  apiKey: process.env.SCRAPYBARA_API_KEY,
-  initialUrl: "https://news.ycombinator.com",
+const computerProvider = createAnchorBrowserComputerProvider({
+  apiKey: process.env.ANCHOR_BROWSER_API_KEY,
 });
 const agent = createAgent({
   aiProvider,
@@ -35,6 +33,8 @@ const session = await agent.initializeSession();
 console.log("session live url", session.get()?.liveUrl);
 const task = await session.runTask({
   instructions: "Summarize the top 3 articles",
+  initialUrl: "https://news.ycombinator.com",
+
   outputSchema: z.object({
     articles: z.array(
       z.object({
@@ -47,6 +47,5 @@ const task = await session.runTask({
 });
 
 console.log("Task", JSON.stringify(task.result, null, 2));
-
 await session.end();
 process.exit(0);
