@@ -28,12 +28,14 @@ const agent = createAgent({
 });
 
 const session = await agent.initializeSession();
+console.log("session live url", session.get()?.liveUrl);
+
 const task = await session.runTask({
   instructions: "Summarize the top 3 articles",
-  onStep: (args) => {
+  onStepComplete: (args) => {
     console.log("Step", JSON.stringify(args, null, 2));
   },
-  onComplete: (args) => {
+  onTaskComplete: (args) => {
     console.log("Complete", JSON.stringify(args, null, 2));
   },
   outputSchema: z.object({
@@ -46,21 +48,7 @@ const task = await session.runTask({
     ),
   }),
 });
-
 console.log("Task", JSON.stringify(task.result, null, 2));
 
 await session.end();
-const sessionDetails = session.get();
-if (!sessionDetails) {
-  throw new Error("Session details are undefined");
-}
-console.log(
-  "session details",
-  sessionDetails.tasks.map((task) => {
-    return {
-      logs: JSON.stringify(task.logs, null, 2),
-      result: task.result,
-    };
-  }),
-);
 process.exit(0);

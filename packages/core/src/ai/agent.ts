@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { AIProvider, AgentLog, AgentMessage, Session, Task } from ".";
-import { type Tool, createCompleteTaskTool } from "../tools";
+import { type Tool, createCompleteTaskTool, createWaitTool } from "../tools";
 import { type ComputerProvider, createComputerTool } from "../tools/computer";
 import { ComputerProviderError, ToolCallError } from "../tools/errors";
 import { SessionMemoryStore, createMemoryTool } from "../tools/memory";
@@ -86,7 +86,8 @@ export function createAgent<T>(options: {
         sessionMap.set(sessionId, {
           ...currentSession,
           status: "stopped",
-          liveUrl: "",
+          liveUrl: undefined,
+          computerProviderId: undefined,
         });
         await computerProvider.stop(sessionId);
       },
@@ -111,13 +112,13 @@ export function createAgent<T>(options: {
         // biome-ignore lint/suspicious/noExplicitAny: user defined
         customTools?: Record<string, Tool<z.ZodSchema, any>>;
         maxSteps?: number;
-        onStep?: (args: {
+        onStepComplete?: (args: {
           step: number;
           sessionId: string;
           currentLog: AgentLog;
           currentTask: Omit<Task<T>, "result">;
         }) => void | Promise<void>;
-        onComplete?: (args: {
+        onTaskComplete?: (args: {
           step: number;
           sessionId: string;
           result: z.infer<T>;
@@ -143,6 +144,7 @@ export function createAgent<T>(options: {
           memory: createMemoryTool({
             memoryStore,
           }),
+          wait: createWaitTool(),
         };
 
         // biome-ignore lint/suspicious/noExplicitAny: user defined
@@ -449,8 +451,8 @@ export function createAgent<T>(options: {
               currentTask.result = result.output;
               currentSession.status = "idle";
               currentTask.logs.push(agentLog);
-              if (task.onComplete) {
-                task.onComplete({
+              if (task.onTaskComplete) {
+                task.onTaskComplete({
                   step,
                   sessionId,
                   result: result.output,
@@ -469,8 +471,8 @@ export function createAgent<T>(options: {
           }
 
           currentTask.logs.push(agentLog);
-          if (task.onStep) {
-            task.onStep({
+          if (task.onStepComplete) {
+            task.onStepComplete({
               step,
               sessionId,
               currentLog: agentLog,
@@ -499,11 +501,12 @@ export function createAgent<T>(options: {
       const sessionId = sessionIdOverride ?? sessionIdGenerator();
       sessionMap.set(sessionId, {
         id: sessionId,
-        liveUrl: "",
+        liveUrl: undefined,
+        computerProviderId: "",
         tasks: [],
         status: "queued",
       });
-      const { liveUrl } = await computerProvider
+      const { liveUrl, computerProviderId } = await computerProvider
         .start(sessionId)
         .catch((error) => {
           logger.error("[Agent] Failed to start computer provider", {
@@ -515,7 +518,8 @@ export function createAgent<T>(options: {
         });
       sessionMap.set(sessionId, {
         id: sessionId,
-        liveUrl: liveUrl ?? "",
+        liveUrl: liveUrl,
+        computerProviderId,
         tasks: [],
         status: "idle",
       });

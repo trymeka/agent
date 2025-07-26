@@ -29,29 +29,31 @@ export const parseComputerToolArgs = (args: string) => {
   if (!result.success) {
     return { schema: computerActionSchema, args: parsedArgs };
   }
-  if (result.data.action.toString().includes("click")) {
+  const actionString =
+    typeof result.data.action === "string"
+      ? result.data.action
+      : result.data.action.type;
+
+  if (actionString.includes("click")) {
     return { schema: clickActionSchema, args: parsedArgs };
   }
-  if (result.data.action.toString().includes("double_click")) {
+  if (actionString.includes("double_click")) {
     return { schema: doubleClickActionSchema, args: parsedArgs };
   }
-  if (result.data.action.toString().includes("drag")) {
+  if (actionString.includes("drag")) {
     return { schema: dragActionSchema, args: parsedArgs };
   }
-  if (result.data.action.toString().includes("keypress")) {
+  if (actionString.includes("keypress")) {
     return { schema: keypressActionSchema, args: parsedArgs };
   }
-  if (result.data.action.toString().includes("move")) {
+  if (actionString.includes("move")) {
     return { schema: moveActionSchema, args: parsedArgs };
   }
-  if (result.data.action.toString().includes("scroll")) {
+  if (actionString.includes("scroll")) {
     return { schema: scrollActionSchema, args: parsedArgs };
   }
-  if (result.data.action.toString().includes("type")) {
+  if (actionString.includes("type")) {
     return { schema: typeActionSchema, args: parsedArgs };
-  }
-  if (result.data.action.toString().includes("wait")) {
-    return { schema: waitActionSchema, args: parsedArgs };
   }
   return null;
 };
@@ -116,22 +118,12 @@ const typeActionSchema = z
   })
   .describe("Type a certain text. Text MUST BE non-empty.");
 
-const waitActionSchema = z
-  .object({
-    type: z.literal("wait").describe("Type of action to perform"),
-    duration: z.number().describe("Duration to wait in seconds"),
-  })
-  .describe(
-    "Wait for a certain duration. Normally used to wait for a page to load.",
-  );
-
 export const computerActionSchema = z.union([
   clickActionSchema,
   doubleClickActionSchema,
   scrollActionSchema,
   keypressActionSchema,
   typeActionSchema,
-  waitActionSchema,
   dragActionSchema,
   moveActionSchema,
 ]);
@@ -142,14 +134,29 @@ export interface ComputerActionResult {
   reasoning: string;
   timestamp: string;
 }
-export interface ComputerProvider<T> {
+
+// biome-ignore lint/suspicious/noExplicitAny: user defined
+export interface ComputerProvider<T, R = Record<string, any>> {
+  /**
+   * Returns the current URL of the environment.
+   * @param sessionId - The session ID.
+   * @throws {ComputerProviderError} If the sessionId is invalid.
+   * @returns The current URL.
+   */
   getCurrentUrl(sessionId: string): Promise<string>;
-  /** Takes a screenshot of the environment. */
-  takeScreenshot(sessionId: string): Promise<string>; // Returns base64 image string
+
+  /**
+   * Takes a screenshot of the environment.
+   * @param sessionId - The session ID.
+   * @throws {ComputerProviderError} If the sessionId is invalid or if the screenshot cannot be taken.
+   * @returns The base64 image string.
+   */
+  takeScreenshot(sessionId: string): Promise<string>;
 
   /**
    * Returns the instance of the computer provider to allow for advanced interactions.
    * @param sessionId - The session ID.
+   * @throws {ComputerProviderError} If the sessionId is invalid.
    * @returns The instance of the computer provider.
    */
   getInstance(sessionId: string): Promise<T>;
@@ -162,6 +169,12 @@ export interface ComputerProvider<T> {
         step: number;
       }) => Promise<{ url: string }>)
     | undefined;
+
+  /**
+   * Navigates to a certain URL.
+   * @param args - The arguments for the navigation.
+   * @throws {ComputerProviderError} If the sessionId is invalid or if the navigation cannot be performed.
+   */
   navigateTo(args: { sessionId: string; url: string }): Promise<void>;
 
   /** Executes a standard computer action. */
@@ -174,11 +187,26 @@ export interface ComputerProvider<T> {
     },
   ): Promise<ComputerActionResult>;
 
-  /** Any necessary setup or teardown logic. */
-  start(sessionId: string): Promise<{
+  /**
+   * Starts a new session.
+   * @param sessionId - The session ID.
+   * @param options - The options for the session to be passed on to the underlying computer provider.
+   * @throws {ComputerProviderError} If the session cannot be started.
+   * @returns The computer provider ID and the live URL if available.
+   */
+  start(
+    sessionId: string,
+    options?: R | undefined,
+  ): Promise<{
     computerProviderId: string;
     liveUrl?: string;
   }>;
+
+  /**
+   * Stops the session.
+   * @param sessionId - The session ID.
+   * @throws {ComputerProviderError} If the session cannot be stopped or if sessionId is invalid.
+   */
   stop(sessionId: string): Promise<void>;
 
   screenSize(): Promise<{ width: number; height: number }>;

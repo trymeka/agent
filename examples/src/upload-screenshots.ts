@@ -2,11 +2,6 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createVercelAIProvider } from "@trymeka/ai-provider-vercel";
 import { createScrapybaraComputerProvider } from "@trymeka/computer-provider-scrapybara";
 import { createAgent } from "@trymeka/core/ai/agent";
-import { z } from "zod";
-
-/**
- * This example shows how to use the Anthropic model to run a task.
- */
 
 if (!process.env.SCRAPYBARA_API_KEY) {
   throw new Error("SCRAPYBARA_API_KEY is not set");
@@ -24,6 +19,21 @@ const aiProvider = createVercelAIProvider({
 const computerProvider = createScrapybaraComputerProvider({
   apiKey: process.env.SCRAPYBARA_API_KEY,
   initialUrl: "https://news.ycombinator.com",
+  uploadScreenshot: async (options) => {
+    const response = await fetch("https://example.com/upload-screenshot", {
+      method: "POST",
+      body: JSON.stringify({
+        b64Image: options.screenshotBase64,
+        sessionId: options.sessionId,
+        step: options.step,
+      }),
+    });
+    console.log("Uploaded screenshot", options.sessionId);
+    const _data = await response.text();
+    return {
+      url: "https://framerusercontent.com/images/GaKFlfUpPkRNtOcizXLNswxjA.png?scale-down-to=1024",
+    };
+  },
 });
 const agent = createAgent({
   aiProvider,
@@ -33,20 +43,10 @@ const agent = createAgent({
 
 const session = await agent.initializeSession();
 console.log("session live url", session.get()?.liveUrl);
+
 const task = await session.runTask({
-  instructions: "Summarize the top 3 articles",
-  outputSchema: z.object({
-    articles: z.array(
-      z.object({
-        title: z.string(),
-        url: z.string(),
-        summary: z.string(),
-      }),
-    ),
-  }),
+  instructions: "Tell me the latest 3 articles",
 });
-
 console.log("Task", JSON.stringify(task.result, null, 2));
-
 await session.end();
 process.exit(0);

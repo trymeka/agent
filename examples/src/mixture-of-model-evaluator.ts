@@ -50,6 +50,8 @@ const agent = createAgent({
 });
 
 const session = await agent.initializeSession();
+console.log("session live url", session.get()?.liveUrl);
+
 const loginResult = await session.runTask({
   instructions:
     "Log in to the website using username: byteblaze and password: hello1234",
@@ -64,18 +66,4 @@ const task = await session.runTask({
 console.log("Task:", JSON.stringify(task.result, null, 2));
 
 await session.end();
-
-const sessionDetails = session.get();
-if (!sessionDetails) {
-  throw new Error("Session details are undefined");
-}
-console.log(
-  "session details",
-  sessionDetails.tasks.map((task) => {
-    return {
-      logs: JSON.stringify(task.logs, null, 2),
-      result: task.result,
-    };
-  }),
-);
 process.exit(0);

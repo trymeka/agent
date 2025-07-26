@@ -50,6 +50,9 @@ importers:
       '@trymeka/ai-provider-vercel':
         specifier: workspace:*
         version: link:../packages/ai-provider-vercel
+      '@trymeka/computer-provider-anchor-browser':
+        specifier: workspace:*
+        version: link:../packages/computer-provider-anchor-browser
       '@trymeka/computer-provider-scrapybara':
         specifier: workspace:*
         version: link:../packages/computer-provider-scrapybara
@@ -89,14 +92,55 @@ importers:
         specifier: ^5.8.3
         version: 5.8.3
 
-  packages/computer-provider-scrapybara:
+  packages/computer-provider-anchor-browser:
+    dependencies:
+      '@trymeka/computer-provider-core':
+        specifier: workspace:*
+        version: link:../computer-provider-core
+      '@trymeka/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@trymeka/typescript':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
+      playwright-core:
+        specifier: ^1.54.1
+        version: 1.54.1
+      tsup:
+        specifier: ^8.5.0
+        version: 8.5.0(postcss@8.5.6)(tsx@4.20.3)(typescript@5.8.3)
+      typescript:
+        specifier: ^5.8.3
+        version: 5.8.3
+
+  packages/computer-provider-core:
     dependencies:
       '@trymeka/core':
         specifier: workspace:*
         version: link:../core
+    devDependencies:
+      '@trymeka/typescript':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
       playwright-core:
         specifier: ^1.54.1
         version: 1.54.1
+      tsup:
+        specifier: ^8.5.0
+        version: 8.5.0(postcss@8.5.6)(tsx@4.20.3)(typescript@5.8.3)
+      typescript:
+        specifier: ^5.8.3
+        version: 5.8.3
+
+  packages/computer-provider-scrapybara:
+    dependencies:
+      '@trymeka/computer-provider-core':
+        specifier: workspace:*
+        version: link:../computer-provider-core
+      '@trymeka/core':
+        specifier: workspace:*
+        version: link:../core
       scrapybara:
         specifier: ^2.5.2
         version: 2.5.2
@@ -104,6 +148,9 @@ importers:
       '@trymeka/typescript':
         specifier: workspace:*
         version: link:../../tooling/typescript
+      playwright-core:
+        specifier: ^1.54.1
+        version: 1.54.1
       tsup:
         specifier: ^8.5.0
         version: 8.5.0(postcss@8.5.6)(tsx@4.20.3)(typescript@5.8.3)

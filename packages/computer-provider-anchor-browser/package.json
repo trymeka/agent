@@ -1,6 +1,6 @@
 {
-  "name": "@trymeka/computer-provider-scrapybara",
-  "version": "0.0.14",
+  "name": "@trymeka/computer-provider-anchor-browser",
+  "version": "0.0.1",
   "type": "module",
   "publishConfig": {
     "access": "public"
@@ -10,10 +10,10 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/trymeka/agent.git",
-    "directory": "packages/computer-provider-scrapybara"
+    "directory": "packages/computer-provider-anchor-browser"
   },
   "license": "MIT",
-  "homepage": "https://github.com/trymeka/agent/tree/main/packages/computer-provider-scrapybara#readme",
+  "homepage": "https://github.com/trymeka/agent/tree/main/packages/computer-provider-anchor-browser#readme",
   "files": ["dist", "!dist/**/*.map", "README.md"],
   "exports": {
     ".": {
@@ -31,8 +31,7 @@
   },
   "dependencies": {
     "@trymeka/computer-provider-core": "workspace:*",
-    "@trymeka/core": "workspace:*",
-    "scrapybara": "^2.5.2"
+    "@trymeka/core": "workspace:*"
   },
   "peerDependencies": {
     "playwright-core": "^1.54.1"

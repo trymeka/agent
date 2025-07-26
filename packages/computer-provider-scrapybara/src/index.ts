@@ -1,3 +1,5 @@
+import { getPage } from "@trymeka/computer-provider-core";
+import { DEFAULT_SCREEN_SIZE } from "@trymeka/computer-provider-core/constants";
 import {
   type ComputerAction,
   type ComputerActionResult,
@@ -41,27 +43,6 @@ const CUA_KEY_TO_XK_KEYSYM: Record<string, string> = {
 
 const SCROLL_PIXELS_PER_UNIT = 152;
 
-function getPage(browser: Browser, providerName: string): Page {
-  const contexts = browser.contexts();
-  if (contexts.length === 0) {
-    throw new ComputerProviderError(
-      `No browser contexts found for ${providerName}. A context should typically exist.`,
-    );
-  }
-  for (const context of contexts) {
-    const pages = context.pages();
-    const nonBlankPage = pages.find((p) => p.url() !== "about:blank");
-    if (nonBlankPage) return nonBlankPage;
-    if (pages.length > 0) {
-      const page = pages[0];
-      if (page) {
-        return page;
-      }
-    }
-  }
-  throw new Error(`No default page found in any context for ${providerName}.`);
-}
-
 const shouldRetryScrapybara = (error: unknown): boolean => {
   if (
     error instanceof TypeError &&
@@ -97,13 +78,16 @@ export function createScrapybaraComputerProvider(options: {
   screenSize?: { width: number; height: number };
   initialUrl?: string;
   logger?: Logger;
-}): ComputerProvider<{
-  browser: Browser;
-  page: Page;
-  instance: BrowserInstance;
-}> {
+}): ComputerProvider<
+  {
+    browser: Browser;
+    page: Page;
+    instance: BrowserInstance;
+  },
+  ScrapybaraClient.RequestOptions
+> {
   const logger = options.logger ?? createNoOpLogger();
-  const screenSize = options.screenSize ?? { width: 1600, height: 900 };
+  const screenSize = options.screenSize ?? DEFAULT_SCREEN_SIZE;
   const scrapybaraClient = new ScrapybaraClient({
     apiKey: () => process.env.SCRAPYBARA_API_KEY ?? "",
   });
@@ -157,11 +141,15 @@ export function createScrapybaraComputerProvider(options: {
       const page = getPage(browser, "Scrapybara");
       return page.url();
     },
-    async start(sessionId: string) {
+    async start(
+      sessionId: string,
+      browserOptions: ScrapybaraClient.RequestOptions,
+    ) {
       logger.info("[ComputerProvider] Starting up scrapybara instance");
       const instance = await scrapybaraClient.startBrowser({
         timeoutHours: 1,
         resolution: [screenSize.width, screenSize.height],
+        ...browserOptions,
       });
 
       logger.info("[ComputerProvider] instance started", {
@@ -170,21 +158,19 @@ export function createScrapybaraComputerProvider(options: {
       const cdpUrl = (await instance.getCdpUrl()).cdpUrl;
       const browser = await chromium.connectOverCDP(cdpUrl);
       const page = getPage(browser, "Scrapybara");
-      page.on("dialog", () => {
-        // Note that we neither need to accept nor dismiss the dialog here.
-        // The dialog will be handled by the agent
-      });
-      const streamUrl = (await instance.getStreamUrl()).streamUrl;
-      logger.info("[ComputerProvider] streamUrl", {
-        streamUrl,
-      });
       if (options.initialUrl) {
         await page.goto(options.initialUrl);
         logger.info(
           `[ComputerProvider] Successfully navigated to initial url ${options.initialUrl}`,
         );
       }
+
       sessionMap.set(sessionId, { instance });
+
+      const streamUrl = (await instance.getStreamUrl()).streamUrl;
+      logger.info("[ComputerProvider] streamUrl", {
+        streamUrl,
+      });
 
       return {
         computerProviderId: instance.id,
@@ -305,7 +291,8 @@ export function createScrapybaraComputerProvider(options: {
                 action: "scroll",
                 coordinates: [x, y],
                 deltaX: mappedDeltaX,
-                deltaY: mappedDeltaY,
+                // prevent scrolling by 0px 0px
+                deltaY: mappedDeltaY || (mappedDeltaX === 0 ? 1 : 0),
                 screenshot: false,
               });
               return {
@@ -348,19 +335,6 @@ export function createScrapybaraComputerProvider(options: {
                 type: "type",
                 actionPerformed: `Typed text: ${text}`,
                 reasoning: context.reasoning ?? `Typed text: ${text}`,
-                timestamp: new Date().toISOString(),
-              };
-            }
-            case "wait": {
-              await instance.computer({
-                action: "wait",
-                duration: 2,
-                screenshot: false,
-              });
-              return {
-                type: "wait",
-                actionPerformed: "Waited for 2 seconds",
-                reasoning: context.reasoning ?? "Waited for 2 seconds",
                 timestamp: new Date().toISOString(),
               };
             }
