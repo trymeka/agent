@@ -65,6 +65,7 @@ const clickActionSchema = z
     y: z.number().describe("Y coordinate for the click"),
     button: z
       .enum(["left", "right", "wheel"])
+      .default("left")
       .describe("Mouse button to use for the click"),
   })
   .describe("Click one of the mouse buttons at a certain coordinate.");
@@ -118,22 +119,12 @@ const typeActionSchema = z
   })
   .describe("Type a certain text. Text MUST BE non-empty.");
 
-const waitActionSchema = z
-  .object({
-    type: z.literal("wait").describe("Type of action to perform"),
-    duration: z.number().describe("Duration to wait in seconds"),
-  })
-  .describe(
-    "Wait for a certain duration. Normally used to wait for a page to load.",
-  );
-
 export const computerActionSchema = z.union([
   clickActionSchema,
   doubleClickActionSchema,
   scrollActionSchema,
   keypressActionSchema,
   typeActionSchema,
-  waitActionSchema,
   dragActionSchema,
   moveActionSchema,
 ]);

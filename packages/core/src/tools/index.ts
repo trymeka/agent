@@ -37,6 +37,7 @@ export {
   type ComputerAction,
   type ComputerActionResult,
 } from "./computer";
+export { createWaitTool } from "./wait";
 export {
   createMemoryTool,
   type MemoryStore,

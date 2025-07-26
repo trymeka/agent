@@ -434,16 +434,6 @@ export function createAnchorBrowserComputerProvider(options: {
             timestamp: new Date().toISOString(),
           };
         }
-        case "wait": {
-          const { duration } = action;
-          await page.waitForTimeout(duration * 1000);
-          return {
-            type: "wait",
-            actionPerformed: `Waited for ${duration} seconds`,
-            reasoning: context.reasoning ?? `Waited for ${duration} seconds`,
-            timestamp: new Date().toISOString(),
-          };
-        }
         case "drag": {
           const { path } = action;
           if (path.length < 2) {

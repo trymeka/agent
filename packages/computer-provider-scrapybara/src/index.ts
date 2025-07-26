@@ -337,19 +337,6 @@ export function createScrapybaraComputerProvider(options: {
                 timestamp: new Date().toISOString(),
               };
             }
-            case "wait": {
-              await instance.computer({
-                action: "wait",
-                duration: 2,
-                screenshot: false,
-              });
-              return {
-                type: "wait",
-                actionPerformed: "Waited for 2 seconds",
-                reasoning: context.reasoning ?? "Waited for 2 seconds",
-                timestamp: new Date().toISOString(),
-              };
-            }
             case "drag": {
               const { path } = action;
               if (!path || path.length < 2) {
