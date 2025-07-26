@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { AIProvider, AgentLog, AgentMessage, Session, Task } from ".";
-import { type Tool, createCompleteTaskTool } from "../tools";
+import { type Tool, createCompleteTaskTool, createWaitTool } from "../tools";
 import { type ComputerProvider, createComputerTool } from "../tools/computer";
 import { ComputerProviderError, ToolCallError } from "../tools/errors";
 import { SessionMemoryStore, createMemoryTool } from "../tools/memory";
@@ -144,6 +144,7 @@ export function createAgent<T>(options: {
           memory: createMemoryTool({
             memoryStore,
           }),
+          wait: createWaitTool(),
         };
 
         // biome-ignore lint/suspicious/noExplicitAny: user defined
