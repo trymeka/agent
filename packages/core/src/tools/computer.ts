@@ -29,29 +29,31 @@ export const parseComputerToolArgs = (args: string) => {
   if (!result.success) {
     return { schema: computerActionSchema, args: parsedArgs };
   }
-  if (result.data.action.toString().includes("click")) {
+  const actionString =
+    typeof result.data.action === "string"
+      ? result.data.action
+      : result.data.action.type;
+
+  if (actionString.includes("click")) {
     return { schema: clickActionSchema, args: parsedArgs };
   }
-  if (result.data.action.toString().includes("double_click")) {
+  if (actionString.includes("double_click")) {
     return { schema: doubleClickActionSchema, args: parsedArgs };
   }
-  if (result.data.action.toString().includes("drag")) {
+  if (actionString.includes("drag")) {
     return { schema: dragActionSchema, args: parsedArgs };
   }
-  if (result.data.action.toString().includes("keypress")) {
+  if (actionString.includes("keypress")) {
     return { schema: keypressActionSchema, args: parsedArgs };
   }
-  if (result.data.action.toString().includes("move")) {
+  if (actionString.includes("move")) {
     return { schema: moveActionSchema, args: parsedArgs };
   }
-  if (result.data.action.toString().includes("scroll")) {
+  if (actionString.includes("scroll")) {
     return { schema: scrollActionSchema, args: parsedArgs };
   }
-  if (result.data.action.toString().includes("type")) {
+  if (actionString.includes("type")) {
     return { schema: typeActionSchema, args: parsedArgs };
-  }
-  if (result.data.action.toString().includes("wait")) {
-    return { schema: waitActionSchema, args: parsedArgs };
   }
   return null;
 };
