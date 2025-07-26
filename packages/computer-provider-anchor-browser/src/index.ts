@@ -1,6 +1,7 @@
 import { Buffer } from "node:buffer";
 import { writeFileSync } from "node:fs";
 import { getPage } from "@trymeka/computer-provider-core";
+import { DEFAULT_SCREEN_SIZE } from "@trymeka/computer-provider-core/constants";
 import {
   type ComputerAction,
   type ComputerActionResult,
@@ -165,7 +166,11 @@ export function createAnchorBrowserComputerProvider(options: {
   } & Record<string, any>
 > {
   const logger = options.logger ?? createNoOpLogger();
-  const screenSize = options.screenSize ?? { width: 1600, height: 810 };
+  const screenSize = options.screenSize ?? {
+    width: DEFAULT_SCREEN_SIZE.width,
+    // For some reason, anchor browser add 90px to the overall height of the browser.
+    height: DEFAULT_SCREEN_SIZE.height - 90,
+  };
   const sessionMap = new Map<
     string,
     {
@@ -336,7 +341,6 @@ export function createAnchorBrowserComputerProvider(options: {
           `No instance found for sessionId ${context.sessionId}. Call .start(sessionId) first. `,
         );
       }
-      const { page } = result;
 
       switch (action.type) {
         case "click": {
@@ -400,16 +404,36 @@ export function createAnchorBrowserComputerProvider(options: {
         }
         case "keypress": {
           const { keys } = action;
-          await anchorClient({
+          const response = await anchorClient({
             anchorId: result.anchorSessionId,
             path: "/keyboard/shortcut",
             body: {
               keys: keys.map(
-                (k) =>
-                  CUA_KEY_TO_PLAYWRIGHT_KEY[k.toLowerCase()] ?? k.toLowerCase(),
+                (k) => CUA_KEY_TO_PLAYWRIGHT_KEY[k.toLowerCase()] ?? k,
               ),
             },
+          }).catch((e) => {
+            if (
+              e instanceof ComputerProviderError &&
+              e.message.includes("500")
+            ) {
+              return null;
+            }
+            throw e;
           });
+
+          if (!response) {
+            logger.warn(
+              `[ComputerProvider] Failed to press keys: ${keys.join("+")}. Not a valid key combination.`,
+            );
+            return {
+              type: "keypress",
+              actionPerformed: `Failed to press keys: ${keys.join("+")}. Not a valid key combination.`,
+              reasoning:
+                context.reasoning ?? `Failed to press keys: ${keys.join("+")}`,
+              timestamp: new Date().toISOString(),
+            };
+          }
 
           return {
             type: "keypress",

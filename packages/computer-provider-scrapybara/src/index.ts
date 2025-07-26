@@ -1,4 +1,5 @@
 import { getPage } from "@trymeka/computer-provider-core";
+import { DEFAULT_SCREEN_SIZE } from "@trymeka/computer-provider-core/constants";
 import {
   type ComputerAction,
   type ComputerActionResult,
@@ -86,7 +87,7 @@ export function createScrapybaraComputerProvider(options: {
   ScrapybaraClient.RequestOptions
 > {
   const logger = options.logger ?? createNoOpLogger();
-  const screenSize = options.screenSize ?? { width: 1600, height: 900 };
+  const screenSize = options.screenSize ?? DEFAULT_SCREEN_SIZE;
   const scrapybaraClient = new ScrapybaraClient({
     apiKey: () => process.env.SCRAPYBARA_API_KEY ?? "",
   });
