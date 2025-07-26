@@ -65,7 +65,6 @@ const clickActionSchema = z
     y: z.number().describe("Y coordinate for the click"),
     button: z
       .enum(["left", "right", "wheel"])
-      .default("left")
       .describe("Mouse button to use for the click"),
   })
   .describe("Click one of the mouse buttons at a certain coordinate.");
