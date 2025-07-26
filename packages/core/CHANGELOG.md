@@ -1,5 +1,11 @@
 # @trymeka/core
 
+## 0.0.16
+
+### Patch Changes
+
+- c07bc46: chore(core): update system prompt to mention new wait tool
+
 ## 0.0.15
 
 ### Patch Changes

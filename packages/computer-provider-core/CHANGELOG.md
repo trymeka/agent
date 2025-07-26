@@ -1,5 +1,12 @@
 # @trymeka/computer-provider-core
 
+## 0.0.3
+
+### Patch Changes
+
+- Updated dependencies [c07bc46]
+  - @trymeka/core@0.0.16
+
 ## 0.0.2
 
 ### Patch Changes
