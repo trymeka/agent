@@ -1,5 +1,5 @@
 {
-  "name": "@trymeka/computer-provider-anchor-browser",
+  "name": "@trymeka/computer-provider-core",
   "version": "0.0.1",
   "type": "module",
   "publishConfig": {
@@ -10,10 +10,10 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/trymeka/agent.git",
-    "directory": "packages/computer-provider-anchor-browser"
+    "directory": "packages/computer-provider-core"
   },
   "license": "MIT",
-  "homepage": "https://github.com/trymeka/agent/tree/main/packages/computer-provider-anchor-browser#readme",
+  "homepage": "https://github.com/trymeka/agent/tree/main/packages/computer-provider-core#readme",
   "files": ["dist", "!dist/**/*.map", "README.md"],
   "exports": {
     ".": {
@@ -30,7 +30,6 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@trymeka/computer-provider-core": "workspace:*",
     "@trymeka/core": "workspace:*"
   },
   "peerDependencies": {

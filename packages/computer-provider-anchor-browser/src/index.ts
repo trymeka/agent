@@ -1,5 +1,6 @@
 import { Buffer } from "node:buffer";
 import { writeFileSync } from "node:fs";
+import { getPage } from "@trymeka/computer-provider-core";
 import {
   type ComputerAction,
   type ComputerActionResult,
@@ -13,6 +14,8 @@ const CUA_KEY_TO_PLAYWRIGHT_KEY: Record<string, string> = {
   "/": "Divide",
   "\\": "Backslash",
   alt: "Alt",
+  altleft: "Alt",
+  altright: "Alt",
   arrowdown: "ArrowDown",
   arrowleft: "ArrowLeft",
   arrowright: "ArrowRight",
@@ -20,11 +23,15 @@ const CUA_KEY_TO_PLAYWRIGHT_KEY: Record<string, string> = {
   backspace: "Backspace",
   capslock: "CapsLock",
   cmd: "Meta",
+  command: "Meta",
   ctrl: "Control",
+  control: "Control",
   delete: "Delete",
   end: "End",
   enter: "Enter",
+  return: "Enter",
   esc: "Escape",
+  escape: "Escape",
   home: "Home",
   insert: "Insert",
   option: "Alt",
@@ -158,7 +165,7 @@ export function createAnchorBrowserComputerProvider(options: {
   } & Record<string, any>
 > {
   const logger = options.logger ?? createNoOpLogger();
-  const screenSize = options.screenSize ?? { width: 1600, height: 900 };
+  const screenSize = options.screenSize ?? { width: 1600, height: 810 };
   const sessionMap = new Map<
     string,
     {
@@ -226,6 +233,10 @@ export function createAnchorBrowserComputerProvider(options: {
         );
       }
 
+      logger.info("[ComputerProvider] instance started", {
+        sessionId,
+      });
+
       const anchorSession = (await response.json()) as {
         data: {
           id: string;
@@ -235,12 +246,12 @@ export function createAnchorBrowserComputerProvider(options: {
       };
       const anchorSessionId = anchorSession.data.id;
 
-      const browser = await chromium.connectOverCDP(anchorSession.data.cdp_url);
-      const page = await browser.newPage();
-      page.on("dialog", () => {
-        // Note that we neither need to accept nor dismiss the dialog here.
-        // The dialog will be handled by the agent
+      logger.info("[ComputerProvider] anchorSessionId", {
+        streamUrl: anchorSession.data.live_view_url,
       });
+
+      const browser = await chromium.connectOverCDP(anchorSession.data.cdp_url);
+      const page = getPage(browser, "Anchor Browser");
       if (options.initialUrl) {
         await page.goto(options.initialUrl);
         logger.info(
@@ -253,6 +264,7 @@ export function createAnchorBrowserComputerProvider(options: {
         anchorSessionId,
         liveUrl: anchorSession.data.live_view_url,
       });
+
       return {
         computerProviderId: anchorSession.data.id,
         liveUrl: anchorSession.data.live_view_url,
@@ -372,7 +384,8 @@ export function createAnchorBrowserComputerProvider(options: {
               x,
               y,
               deltaX: scrollX,
-              deltaY: scrollY,
+              // prevent scrolling by 0px 0px
+              deltaY: scrollY || (scrollX === 0 ? 1 : 0),
             },
           });
 

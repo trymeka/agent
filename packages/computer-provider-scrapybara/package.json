@@ -30,6 +30,7 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
+    "@trymeka/computer-provider-core": "workspace:*",
     "@trymeka/core": "workspace:*",
     "scrapybara": "^2.5.2"
   },
