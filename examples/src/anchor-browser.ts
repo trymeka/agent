@@ -32,9 +32,8 @@ const agent = createAgent({
 const session = await agent.initializeSession();
 console.log("session live url", session.get()?.liveUrl);
 const task = await session.runTask({
-  instructions: "Read the top 3 articles and summarize them",
+  instructions: "Read the top article and summarize them",
   initialUrl: "https://news.ycombinator.com",
-
   outputSchema: z.object({
     articles: z.array(
       z.object({
