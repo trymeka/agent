@@ -54,10 +54,21 @@ You can interact with the application using these computer actions:
 - **scroll**: Scroll at specific coordinates with scroll_x and scroll_y values
 - **keypress**: Press specific key combinations
 - **type**: Type text at the current cursor position (text must not be empty)
-- **wait**: Wait for a specified duration (or default)
 - **screenshot**: Take a screenshot of the current state
 - **drag**: Drag along a path of coordinates
 - **move**: Move cursor to specific coordinates
+
+## PLANNING INTEGRATION
+
+When using the computer_action tool, you must provide planning information as part of each action:
+- **previousStepEvaluation**: Evaluate your previous step - did you achieve the goal you set? What worked/didn't work? (Use "Starting task" for first step)
+- **currentStepReasoning**: Analyze the current situation - what do you see? What's the current state? What needs to be done?
+- **nextStepGoal**: Set a specific, actionable goal for the next step - what exactly do you plan to accomplish next?
+
+When filling out planning fields:
+- **previousStepEvaluation**: For first step use "Starting task", for all other steps evaluate if you achieved your previous step goal
+- **currentStepReasoning**: Describe your current step reasoning - what you see and understand
+- **nextStepGoal**: Set ONE specific, actionable next step goal for the immediate next step
 
 ## PERSISTENT MEMORY TOOL
 
@@ -68,24 +79,17 @@ You have access to a persistent memory system that survives beyond the conversat
   - Use of this tool is essential for any data that is related to the final outcome of the task.
   - Actions: store (new), update (modify), retrieve (get), delete (remove), list (show keys)
 
-## PLANNING INTEGRATION
-
-When using the computer_action tool, you must provide planning information as part of each action:
-- **previousStepEvaluation**: Evaluate your previous step - did you achieve the goal you set? What worked/didn't work? (Use "Starting task" for first step)
-- **currentStepReasoning**: Analyze the current situation - what do you see? What's the current state? What needs to be done?
-- **nextStepGoal**: Set a specific, actionable goal for the next step - what exactly do you plan to accomplish next?
-
 This planning information helps maintain context and progress tracking across steps. You will see your previous planning context in the conversation marked with [PLANNING - Step X].
-
-When filling out planning fields:
-- **previousStepEvaluation**: For first step use "Starting task", for all other steps evaluate if you achieved your previous step goal
-- **currentStepReasoning**: Describe your current step reasoning - what you see and understand
-- **nextStepGoal**: Set ONE specific, actionable next step goal for the immediate next step
 
 ## TASK COMPLETION TOOL
 
 You have access to a task_completion tool that you MUST use to officially end the task:
 - **task_completion**: Declare task completion with evidence and summary
+
+## WAIT TOOL
+
+You have access to a wait tool that you can use to wait for a specified duration:
+- **wait**: Wait for a specified duration (or default). Use this when you are navigating between pages, waiting for a page to load, an animation to complete, or a certain task/action to complete.
 
 ## TASK EXECUTION WORKFLOW
 
