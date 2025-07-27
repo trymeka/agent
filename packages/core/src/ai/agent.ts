@@ -124,7 +124,7 @@ export function createAgent<T>(options: {
           result: z.infer<T>;
           currentTask: Omit<Task<T>, "result">;
         }) => void | Promise<void>;
-      }): Promise<Task<T>> => {
+      }): Promise<Task<z.infer<T>>> => {
         const MAX_STEPS = task.maxSteps ?? 100;
         const CONVERSATION_LOOK_BACK = 7;
 
