@@ -1,5 +1,11 @@
 # @trymeka/core
 
+## 0.0.17
+
+### Patch Changes
+
+- a20fc89: fix(core): type output from agent
+
 ## 0.0.16
 
 ### Patch Changes

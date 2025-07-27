@@ -1,5 +1,12 @@
 # @trymeka/computer-provider-core
 
+## 0.0.4
+
+### Patch Changes
+
+- Updated dependencies [a20fc89]
+  - @trymeka/core@0.0.17
+
 ## 0.0.3
 
 ### Patch Changes
