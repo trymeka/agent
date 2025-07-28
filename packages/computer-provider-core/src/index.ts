@@ -30,3 +30,13 @@ export function getPage(browser: Browser, providerName: string): Page {
   }
   throw new Error(`No default page found in any context for ${providerName}.`);
 }
+
+export function getInstance<T>(sessionId: string, sessionMap: Map<string, T>) {
+  const result = sessionMap.get(sessionId);
+  if (!result) {
+    throw new ComputerProviderError(
+      `No instance found for sessionId ${sessionId}. Call .start(sessionId) first.`,
+    );
+  }
+  return result;
+}
