@@ -36,7 +36,7 @@ console.log("session live url", session.get()?.liveUrl);
 
 const task = await session
   .runTask({
-    instructions: "Read the last article and summarize it",
+    instructions: "Read the last article on the front page and summarize it",
     // initialUrl: "https://news.ycombinator.com",
     outputSchema: z.object({
       articles: z.array(

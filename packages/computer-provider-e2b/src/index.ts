@@ -55,7 +55,6 @@ export function createE2BComputerProvider(options: {
       ? options.uploadScreenshot
       : undefined,
     async getCurrentUrl(sessionId: string) {
-      // TODO: Figure out how to get the current URL without using a command
       const { sandbox } = getInstance(sessionId, sessionMap);
       await sandbox.press(["ctrl", "l"]);
       await sandbox.press(["ctrl", "c"]);
