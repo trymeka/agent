@@ -34,7 +34,10 @@ export function createE2BComputerProvider(options: {
   SandboxOpts
 > {
   const logger = options.logger ?? createNoOpLogger();
-  const screenSize = options.screenSize ?? DEFAULT_SCREEN_SIZE;
+  const screenSize = options.screenSize ?? {
+    ...DEFAULT_SCREEN_SIZE,
+    width: 1000,
+  };
   const sessionMap = new Map<string, { sandbox: Sandbox }>();
 
   return {
@@ -189,7 +192,7 @@ export function createE2BComputerProvider(options: {
               const { x, y, scroll_x: scrollX, scroll_y: scrollY } = action;
 
               // arbitrary number of 100 pixels per notch
-              const scrollYNotches = Math.floor(scrollY / 100) || 1;
+              const scrollYNotches = Math.abs(Math.floor(scrollY / 100)) || 1;
 
               // TODO: Figure out how to handle scrollX
               await sandbox.moveMouse(x, y);
