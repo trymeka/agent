@@ -1,6 +1,5 @@
 import { Buffer } from "node:buffer";
-import { writeFileSync } from "node:fs";
-import { getPage } from "@trymeka/computer-provider-core";
+import { getInstance, getPage } from "@trymeka/computer-provider-core";
 import { DEFAULT_SCREEN_SIZE } from "@trymeka/computer-provider-core/constants";
 import {
   type ComputerAction,
@@ -188,12 +187,7 @@ export function createAnchorBrowserComputerProvider(options: {
       return Promise.resolve(screenSize);
     },
     getInstance(sessionId: string) {
-      const result = sessionMap.get(sessionId);
-      if (!result) {
-        throw new ComputerProviderError(
-          `No instance found for sessionId ${sessionId}. Call .start(sessionId) first.`,
-        );
-      }
+      const result = getInstance(sessionId, sessionMap);
       return Promise.resolve({
         browser: result.browser,
         page: result.page,
@@ -276,12 +270,7 @@ export function createAnchorBrowserComputerProvider(options: {
       };
     },
     async stop(sessionId: string) {
-      const result = sessionMap.get(sessionId);
-      if (!result) {
-        throw new ComputerProviderError(
-          `No instance found for sessionId ${sessionId}. Call .start(sessionId) first.`,
-        );
-      }
+      const result = getInstance(sessionId, sessionMap);
       await result.browser.close();
       await anchorClient({
         anchorId: result.anchorSessionId,
@@ -293,33 +282,18 @@ export function createAnchorBrowserComputerProvider(options: {
     },
     navigateTo: async (args: { sessionId: string; url: string }) => {
       const { sessionId, url } = args;
-      const result = sessionMap.get(sessionId);
-      if (!result) {
-        throw new ComputerProviderError(
-          `No instance found for sessionId ${sessionId}. Call .start(sessionId) first.`,
-        );
-      }
+      const result = getInstance(sessionId, sessionMap);
       await result.page.goto(url);
     },
     uploadScreenshot: options.uploadScreenshot
       ? options.uploadScreenshot
       : undefined,
     getCurrentUrl(sessionId: string) {
-      const result = sessionMap.get(sessionId);
-      if (!result) {
-        throw new ComputerProviderError(
-          `No instance found for sessionId ${sessionId}. Call .start(sessionId) first.`,
-        );
-      }
+      const result = getInstance(sessionId, sessionMap);
       return Promise.resolve(result.page.url());
     },
     async takeScreenshot(sessionId: string) {
-      const result = sessionMap.get(sessionId);
-      if (!result) {
-        throw new ComputerProviderError(
-          `No instance found for sessionId ${sessionId}. Call .start(sessionId) first.`,
-        );
-      }
+      const result = getInstance(sessionId, sessionMap);
       const response = await anchorClient({
         anchorId: result.anchorSessionId,
         path: "/screenshot",
@@ -328,19 +302,13 @@ export function createAnchorBrowserComputerProvider(options: {
 
       const screenshot = await response.arrayBuffer();
       const b64 = Buffer.from(screenshot).toString("base64");
-      writeFileSync("screenshot.png", Buffer.from(screenshot));
       return b64;
     },
     async performAction(
       action: ComputerAction,
       context: { sessionId: string; step: number; reasoning?: string },
     ): Promise<ComputerActionResult> {
-      const result = sessionMap.get(context.sessionId);
-      if (!result) {
-        throw new ComputerProviderError(
-          `No instance found for sessionId ${context.sessionId}. Call .start(sessionId) first. `,
-        );
-      }
+      const result = getInstance(context.sessionId, sessionMap);
 
       switch (action.type) {
         case "click": {

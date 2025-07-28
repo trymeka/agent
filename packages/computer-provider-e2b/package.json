@@ -1,6 +1,6 @@
 {
-  "name": "@trymeka/computer-provider-anchor-browser",
-  "version": "0.0.5",
+  "name": "@trymeka/computer-provider-e2b",
+  "version": "0.0.1",
   "type": "module",
   "publishConfig": {
     "access": "public"
@@ -10,10 +10,10 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/trymeka/agent.git",
-    "directory": "packages/computer-provider-anchor-browser"
+    "directory": "packages/computer-provider-e2b"
   },
   "license": "MIT",
-  "homepage": "https://github.com/trymeka/agent/tree/main/packages/computer-provider-anchor-browser#readme",
+  "homepage": "https://github.com/trymeka/agent/tree/main/packages/computer-provider-e2b#readme",
   "files": ["dist", "!dist/**/*.map", "README.md"],
   "exports": {
     ".": {
@@ -29,17 +29,14 @@
     "lint": "pnpx @biomejs/biome@1.9.4 lint . --write",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
-  "dependencies": {
-    "@trymeka/computer-provider-core": "workspace:*",
-    "@trymeka/core": "workspace:*"
-  },
-  "peerDependencies": {
-    "playwright-core": "^1.54.1"
-  },
   "devDependencies": {
     "@trymeka/typescript": "workspace:*",
-    "playwright-core": "^1.54.1",
     "tsup": "^8.5.0",
     "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@e2b/desktop": "^1.9.2",
+    "@trymeka/computer-provider-core": "workspace:*",
+    "@trymeka/core": "workspace:*"
   }
 }

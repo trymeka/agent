@@ -252,7 +252,10 @@ export function createAgent<T>(options: {
         currentSession.tasks.push(currentTask);
 
         logger.info("[Agent] Starting task execution", {
-          task,
+          task: {
+            ...task,
+            outputSchema: task.outputSchema ? "custom" : "default",
+          },
           tools: Object.keys(allTools),
         });
 

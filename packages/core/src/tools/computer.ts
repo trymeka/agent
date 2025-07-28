@@ -161,6 +161,8 @@ export interface ComputerProvider<T, R = Record<string, any>> {
    */
   getInstance(sessionId: string): Promise<T>;
 
+  getCurrentUrl(sessionId: string): Promise<string | undefined>;
+
   /** Uploads a screenshot and returns its public URL. */
   uploadScreenshot:
     | ((options: {
