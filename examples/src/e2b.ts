@@ -23,7 +23,6 @@ const aiProvider = createVercelAIProvider({
 });
 const computerProvider = createE2BComputerProvider({
   apiKey: process.env.E2B_API_KEY,
-  initialUrl: "https://news.ycombinator.com",
 });
 const agent = createAgent({
   aiProvider,
@@ -37,7 +36,7 @@ console.log("session live url", session.get()?.liveUrl);
 const task = await session
   .runTask({
     instructions: "Read the last article on the front page and summarize it",
-    // initialUrl: "https://news.ycombinator.com",
+    initialUrl: "https://news.ycombinator.com",
     outputSchema: z.object({
       articles: z.array(
         z.object({
@@ -49,8 +48,8 @@ const task = await session
       ),
     }),
   })
-  .finally(() => {
-    session.end();
+  .finally(async () => {
+    await session.end();
     console.log("Session ended");
   });
 
