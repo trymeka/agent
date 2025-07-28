@@ -1,6 +1,6 @@
 {
-  "name": "@trymeka/ai-provider-vercel",
-  "version": "0.0.17",
+  "name": "@trymeka/computer-provider-core",
+  "version": "0.0.4",
   "type": "module",
   "publishConfig": {
     "access": "public"
@@ -10,15 +10,19 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/trymeka/agent.git",
-    "directory": "packages/ai-provider-vercel"
+    "directory": "packages/computer-provider-core"
   },
   "license": "MIT",
-  "homepage": "https://github.com/trymeka/agent/tree/main/packages/ai-provider-vercel#readme",
+  "homepage": "https://github.com/trymeka/agent/tree/main/packages/computer-provider-core#readme",
   "files": ["dist", "!dist/**/*.map", "README.md"],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./constants": {
+      "types": "./dist/constants.d.ts",
+      "import": "./dist/constants.js"
     }
   },
   "scripts": {
@@ -30,12 +34,14 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@trymeka/core": "workspace:*",
-    "ai": "^4.3.15",
-    "zod": "^3.24.4"
+    "@trymeka/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "playwright-core": "^1.54.1"
   },
   "devDependencies": {
     "@trymeka/typescript": "workspace:*",
+    "playwright-core": "^1.54.1",
     "tsup": "^8.5.0",
     "typescript": "^5.8.3"
   }

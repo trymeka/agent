@@ -1,11 +1,7 @@
 import { z } from "zod";
-import type { AIProvider, AgentLog, AgentMessage } from ".";
-import { type Tool, createCompleteTaskTool } from "../tools";
-import {
-  type ComputerActionResult,
-  type ComputerProvider,
-  createComputerTool,
-} from "../tools/computer";
+import type { AIProvider, AgentLog, AgentMessage, Session, Task } from ".";
+import { type Tool, createCompleteTaskTool, createWaitTool } from "../tools";
+import { type ComputerProvider, createComputerTool } from "../tools/computer";
 import { ComputerProviderError, ToolCallError } from "../tools/errors";
 import { SessionMemoryStore, createMemoryTool } from "../tools/memory";
 import { type Logger, createNoOpLogger } from "../utils/logger";
@@ -14,27 +10,70 @@ import { SYSTEM_PROMPT } from "./prompts/system";
 
 const sessionIdGenerator = () => `session_${crypto.randomUUID()}`;
 
-export function createAgent(options: {
-  aiProvider: AIProvider;
-  computerProvider: ComputerProvider;
+/**
+ *@example
+ * ```ts
+ * const agent = createAgent({
+ *   aiProvider: createVercelAIProvider({
+ *     model: createOpenAI({
+ *       apiKey: process.env.OPENAI_API_KEY,
+ *     })("o3"),
+ *   }),
+ *   computerProvider: createScrapybaraComputerProvider({
+ *     apiKey: process.env.SCRAPYBARA_API_KEY,
+ *   }),
+ * });
+ * const session = await agent.initializeSession();
+ * const task = await session.runTask({
+ *   instructions: "Summarize the top 3 articles",
+ *   outputSchema: z.object({
+ *     articles: z.array(z.object({
+ *       title: z.string(),
+ *       url: z.string(),
+ *       summary: z.string(),
+ *     })),
+ *   }),
+ *   initialUrl: "https://news.ycombinator.com",
+ * });
+ * console.log(task);
+ * ```
+ *
+ * Creates an agent that can be used to run tasks.
+ * @param {Object} options - The options for the agent.
+ * @param {AIProvider | { ground: AIProvider; alternateGround?: AIProvider; evaluator?: AIProvider; }} options.aiProvider - The AI provider to use for the agent.
+ * @param {ComputerProvider} options.computerProvider - The computer provider to use for the agent.
+ * @param {Logger | undefined} [options.logger] - The logger to use for the agent.
+ * @param {number} [options.maxSteps] - The maximum number of steps to take for a task.
+ * @param {number} [options.conversationLookBack] - The number of steps to look back for the conversation history.
+ *
+ * @returns A session manager that can be used to start tasks.
+ */
+export function createAgent<T>(options: {
+  aiProvider:
+    | AIProvider
+    | {
+        ground: AIProvider;
+        alternateGround?: AIProvider;
+        evaluator?: AIProvider;
+      };
+  computerProvider: ComputerProvider<T>;
   logger?: Logger;
 }) {
-  // Dependencies are destructured and composed.
-  const { aiProvider, computerProvider } = options;
-  const logger = options.logger ?? createNoOpLogger();
-  const sessionMap = new Map<
-    string,
-    {
-      id: string;
-      liveUrl: string;
-      status: "queued" | "running" | "idle" | "stopped";
-      tasks: {
-        instructions: string;
-        result: unknown;
-        logs: AgentLog[];
-      }[];
-    }
-  >();
+  const { aiProvider, computerProvider, logger: loggerOverride } = options;
+  const {
+    ground,
+    evaluator: baseEvaluator,
+    alternateGround,
+  } = "ground" in aiProvider ? aiProvider : { ground: aiProvider };
+  const evaluator: AIProvider | undefined =
+    baseEvaluator ??
+    // we default to the ground provider if no evaluator is provided.
+    // unless the evaluator is explicitly provided (could be undefined)
+    ("evaluator" in aiProvider ? aiProvider.evaluator : ground);
+
+  const logger = loggerOverride ?? createNoOpLogger();
+
+  const sessionMap = new Map<string, Session>();
 
   function createSession(sessionId: string) {
     return {
@@ -47,24 +86,46 @@ export function createAgent(options: {
         sessionMap.set(sessionId, {
           ...currentSession,
           status: "stopped",
-          liveUrl: "",
+          liveUrl: undefined,
+          computerProviderId: undefined,
         });
         await computerProvider.stop(sessionId);
+      },
+      getTask: (taskId: string) => {
+        const currentSession = sessionMap.get(sessionId);
+        if (!currentSession) {
+          throw new AgentError(`Session not found for sessionId: ${sessionId}`);
+        }
+        return currentSession.tasks.find((task) => task.id === taskId);
       },
       get: () => {
         const currentSession = sessionMap.get(sessionId);
         if (!currentSession) {
-          throw new AgentError(`Session not found for sessionId: ${sessionId}`);
+          return undefined;
         }
         return currentSession;
       },
       runTask: async <T extends z.ZodSchema>(task: {
         instructions: string;
+        initialUrl?: string;
         outputSchema?: T;
         // biome-ignore lint/suspicious/noExplicitAny: user defined
         customTools?: Record<string, Tool<z.ZodSchema, any>>;
-      }): Promise<{ result: z.infer<T> }> => {
-        const MAX_STEPS = 300;
+        maxSteps?: number;
+        onStepComplete?: (args: {
+          step: number;
+          sessionId: string;
+          currentLog: AgentLog;
+          currentTask: Omit<Task<T>, "result">;
+        }) => void | Promise<void>;
+        onTaskComplete?: (args: {
+          step: number;
+          sessionId: string;
+          result: z.infer<T>;
+          currentTask: Omit<Task<T>, "result">;
+        }) => void | Promise<void>;
+      }): Promise<Task<z.infer<T>>> => {
+        const MAX_STEPS = task.maxSteps ?? 100;
         const CONVERSATION_LOOK_BACK = 7;
 
         // Create persistent memory store for this task
@@ -75,13 +136,17 @@ export function createAgent(options: {
             computerProvider,
           }),
           complete_task: createCompleteTaskTool({
-            aiProvider,
-            outputSchema: task.outputSchema ?? z.string(),
+            ground,
+            evaluator,
+            outputSchema: task.outputSchema ?? z.object({ value: z.string() }),
+            currentInstruction: task.instructions,
           }),
           memory: createMemoryTool({
             memoryStore,
           }),
+          wait: createWaitTool(),
         };
+
         // biome-ignore lint/suspicious/noExplicitAny: user defined
         const allTools: Record<string, Tool<z.ZodSchema, any>> = {
           ...coreTools,
@@ -110,8 +175,12 @@ export function createAgent(options: {
 
           if (step > CONVERSATION_LOOK_BACK) {
             const task = conversationChunk.get(1);
-            if (task) {
-              relevantConversations.unshift([1, task]);
+            const initialTaskMessage = task?.filter(
+              (msg) => msg.role === "user",
+            );
+            if (initialTaskMessage?.length) {
+              // Only preserve the initial user task message, not assistant responses/planning from Step 1
+              relevantConversations.unshift([1, initialTaskMessage]);
             }
           }
 
@@ -120,9 +189,7 @@ export function createAgent(options: {
           );
 
           // Inject persistent memory context if available
-          const memoryContext = (
-            memoryStore as SessionMemoryStore
-          ).getMemoryContext();
+          const memoryContext = memoryStore.getMemoryContext();
           if (memoryContext) {
             // Add memory context as the first user message so it's always visible
             messages.unshift({
@@ -139,20 +206,49 @@ export function createAgent(options: {
           return messages;
         }
 
+        if (task.initialUrl) {
+          await computerProvider.navigateTo({
+            sessionId,
+            url: task.initialUrl,
+          });
+          logger.info("[Agent] Navigated to initial URL", {
+            initialUrl: task.initialUrl,
+          });
+        }
+
+        const [groundModelName, alternateModelName] = await Promise.all([
+          ground.modelName(),
+          alternateGround?.modelName(),
+        ]);
+
+        const getCurrentModel = (step: number) => {
+          // If no alternateGround, always use ground
+          if (!alternateGround) {
+            return { model: groundModelName, provider: ground };
+          }
+          // Alternate between models: odd steps use ground, even steps use alternateGround
+          return step % 2 === 1
+            ? { model: groundModelName, provider: ground }
+            : // cast is okay because we know alternateGround is defined
+              {
+                model: alternateModelName as string,
+                provider: alternateGround,
+              };
+        };
+
         const currentSession = sessionMap.get(sessionId);
         if (!currentSession) {
           throw new AgentError(`Session not found for sessionId: ${sessionId}`);
         }
         currentSession.status = "running";
-        const currentTask: {
-          instructions: string;
-          result: unknown;
-          logs: AgentLog[];
-        } = {
-          instructions: task.instructions,
-          logs: [] as AgentLog[],
-          result: undefined,
-        };
+        const currentTask: Omit<Task<T>, "result"> & { result: T | undefined } =
+          {
+            id: crypto.randomUUID(),
+            instructions: task.instructions,
+            logs: [],
+            result: undefined,
+            initialUrl: task.initialUrl,
+          };
         currentSession.tasks.push(currentTask);
 
         logger.info("[Agent] Starting task execution", {
@@ -168,7 +264,6 @@ export function createAgent(options: {
               cause: error,
             });
           });
-        const modelName = await aiProvider.modelName();
         const firstScreenshot = await computerProvider
           .takeScreenshot(sessionId)
           .catch((error) => {
@@ -217,7 +312,8 @@ export function createAgent(options: {
           });
 
           // Generate model response
-          const response = await aiProvider
+          const currentModel = getCurrentModel(step);
+          const response = await currentModel.provider
             .generateText({
               systemPrompt: SYSTEM_PROMPT({
                 screenSize,
@@ -226,6 +322,9 @@ export function createAgent(options: {
               tools: allTools,
             })
             .catch((error) => {
+              logger.error("[Agent] AI provider failed to generate text", {
+                error: error.message,
+              });
               throw new AIProviderError("AI provider failed to generate text", {
                 cause: error,
               });
@@ -264,27 +363,28 @@ export function createAgent(options: {
                 content: [
                   {
                     type: "text",
-                    text: "You haven't called any tools. Please continue with the task or use the complete_task tool if you believe the task is complete and all requirements have been met.",
+                    text: "Please continue with the task with what you think is best. If you or the user believe the task is complete and all requirements have been met, use the complete_task tool.",
                   },
                 ],
               },
             ]);
           }
-
-          // Create agent log for this step
-          const agentLog: AgentLog = {
+          let agentLog: AgentLog = {
             screenshot: "",
-            step: step,
+            step,
             timestamp: new Date().toISOString(),
+            currentUrl: await computerProvider.getCurrentUrl(sessionId),
             modelOutput: {
-              done: {
-                type: "text",
-                text: response.text ?? "Processing...",
-                reasoning: response.reasoning ?? "No reasoning provided",
-              },
+              done: [
+                {
+                  type: "text",
+                  text: response.text ?? "Processing...",
+                  reasoning: response.reasoning ?? "No reasoning provided",
+                },
+              ],
             },
             usage: {
-              model: modelName,
+              model: currentModel.model,
               inputTokensStep: response.usage?.promptTokens,
               outputTokensStep: response.usage?.completionTokens,
               totalTokensStep: response.usage?.totalTokens,
@@ -326,6 +426,9 @@ export function createAgent(options: {
                 messages: conversationHistory,
               })
               .catch((error) => {
+                logger.error("[Agent] Error executing tool call", {
+                  error: error.message,
+                });
                 throw new ToolCallError(
                   `Error executing tool call: ${toolCall.toolName}`,
                   {
@@ -337,69 +440,45 @@ export function createAgent(options: {
               });
 
             logger.info("[Agent] Tool call result", {
-              result: {
-                ...result,
-                ...(typeof result === "object" &&
-                !!result &&
-                "screenshot" in result
-                  ? {
-                      screenshot:
-                        result.screenshot instanceof URL
-                          ? result.screenshot.toString()
-                          : "image-data",
-                    }
-                  : {}),
-              },
+              result:
+                result.type === "completion"
+                  ? result.output
+                  : result.response.content.filter((c) => c.type === "text"),
             });
+
             // If the tool is `complete_task`, we should return the result and stop the agent.
-            if (toolCall.toolName === "complete_task") {
+            if (result.type === "completion") {
               currentTask.result = result.output;
               currentSession.status = "idle";
-              return { result: result.output };
+              currentTask.logs.push(agentLog);
+              if (task.onTaskComplete) {
+                task.onTaskComplete({
+                  step,
+                  sessionId,
+                  result: result.output,
+                  currentTask: currentTask,
+                });
+              }
+
+              return currentTask as Task<T>;
             }
 
-            // For computer actions, we expect a certain output to build the next message.
-            if (toolCall.toolName === "computer_action") {
-              const computerActionResult = result as ComputerActionResult & {
-                screenshot: string | URL;
-              };
-              agentLog.screenshot = computerActionResult.screenshot.toString();
-              agentLog.modelOutput.done.reasoning =
-                computerActionResult.reasoning;
-              buildMessageInput(step + 1, [
-                {
-                  role: "user",
-                  content: [
-                    {
-                      type: "text",
-                      text: `Computer action on ${computerActionResult.timestamp}, result: ${computerActionResult.actionPerformed}. Reasoning: ${computerActionResult.reasoning} Screenshot as attached.`,
-                    },
-                    {
-                      type: "image",
-                      image: computerActionResult.screenshot,
-                    },
-                  ],
-                },
-              ]);
-            } else {
-              // For other tools, we just add the result as text.
-              buildMessageInput(step + 1, [
-                {
-                  role: "user",
-                  content: [
-                    {
-                      type: "text",
-                      text: `Tool ${toolCall.toolName} executed with result: ${JSON.stringify(
-                        result,
-                      )}`,
-                    },
-                  ],
-                },
-              ]);
+            // Update agent log for this step
+            if (result.updateCurrentAgentLog) {
+              agentLog = result.updateCurrentAgentLog(agentLog);
             }
+            buildMessageInput(step + 1, [result.response]);
           }
 
           currentTask.logs.push(agentLog);
+          if (task.onStepComplete) {
+            task.onStepComplete({
+              step,
+              sessionId,
+              currentLog: agentLog,
+              currentTask: currentTask,
+            });
+          }
           ++step;
         }
 
@@ -422,20 +501,25 @@ export function createAgent(options: {
       const sessionId = sessionIdOverride ?? sessionIdGenerator();
       sessionMap.set(sessionId, {
         id: sessionId,
-        liveUrl: "",
+        liveUrl: undefined,
+        computerProviderId: "",
         tasks: [],
         status: "queued",
       });
-      const { liveUrl } = await computerProvider
+      const { liveUrl, computerProviderId } = await computerProvider
         .start(sessionId)
         .catch((error) => {
+          logger.error("[Agent] Failed to start computer provider", {
+            error: error.message,
+          });
           throw new ComputerProviderError("Failed to start computer provider", {
             cause: error,
           });
         });
       sessionMap.set(sessionId, {
         id: sessionId,
-        liveUrl: liveUrl ?? "",
+        liveUrl: liveUrl,
+        computerProviderId,
         tasks: [],
         status: "idle",
       });

@@ -5,7 +5,11 @@ import type {
   GenerateTextResult,
   Tool,
 } from "@trymeka/core";
-import { parseComputerToolArgs } from "@trymeka/core/tools/computer";
+import {
+  type ComputerToolArgs,
+  parseComputerToolArgs,
+} from "@trymeka/core/tools/computer";
+import type { Logger } from "@trymeka/core/utils/logger";
 import {
   type CoreMessage,
   type LanguageModel,
@@ -57,9 +61,11 @@ function toVercelTools<T extends z.ZodSchema>(
 
 export function createVercelAIProvider({
   model,
+  logger,
   ...vercelOptions
 }: {
   model: LanguageModel;
+  logger?: Logger;
 } & Pick<
   Parameters<typeof generateText>[0],
   | "topP"
@@ -99,33 +105,99 @@ export function createVercelAIProvider({
             return null;
           }
 
-          const toolCallResult = parseComputerToolArgs(toolCall.args);
-          if (!toolCallResult) {
-            return null;
+          logger?.info("[VercelAIProvider] Repairing tool call", {
+            toolCall,
+            parameterSchema,
+          });
+          if (toolCall.toolName === "computer_action") {
+            const toolCallResult = parseComputerToolArgs(toolCall.args);
+            logger?.info("[VercelAIProvider] Computer action tool call", {
+              toolCallResult,
+            });
+            if (!toolCallResult) {
+              return null;
+            }
+
+            const result = await generateObject({
+              model: model,
+              schema: toolCallResult.schema,
+              prompt: [
+                `The model tried to call the tool "${toolCall.toolName}" with the following arguments:`,
+                JSON.stringify(toolCallResult.args.action),
+                "Please review the generated object and fix the arguments based on the required schema.",
+              ].join("\n"),
+              experimental_repairText: ({ text, error }) => {
+                logger?.info(
+                  "[VercelAIProvider] Error parsing text initially generated for computer_action",
+                  {
+                    text,
+                    error,
+                  },
+                );
+                return Promise.resolve(text);
+              },
+              maxRetries: 3,
+            }).catch((error) => {
+              logger?.error(
+                "[VercelAIProvider] Error generating object for computer_action",
+                {
+                  error: error.message,
+                },
+              );
+              return null;
+            });
+            if (!result) {
+              return null;
+            }
+            logger?.info("[VercelAIProvider] Repairing tool call result", {
+              output: result?.object,
+            });
+
+            return {
+              ...toolCall,
+              args: JSON.stringify({
+                action: result.object,
+                reasoning: toolCallResult.args.reasoning,
+                previousStepEvaluation:
+                  toolCallResult.args.previousStepEvaluation,
+                nextStepGoal: toolCallResult.args.nextStepGoal,
+                currentStepReasoning: toolCallResult.args.currentStepReasoning,
+              } satisfies ComputerToolArgs),
+            };
           }
 
           const result = await generateObject({
             model: model,
-            schema: toolCallResult.schema,
+            schema: parameterSchema(toolCall),
             prompt: [
               `The model tried to call the tool "${toolCall.toolName}" with the following arguments:`,
               JSON.stringify(toolCall.args),
-              "The tool accepts the following schema:",
-              JSON.stringify(parameterSchema(toolCall)),
-              "Please fix the arguments.",
+              "Please review the generated object and fix the arguments based on the required schema.",
             ].join("\n"),
+            experimental_repairText: ({ text, error }) => {
+              logger?.info("[VercelAIProvider] Error generating object", {
+                text,
+                error,
+              });
+              return Promise.resolve(text);
+            },
             maxRetries: 3,
+          }).catch((error) => {
+            logger?.error("[VercelAIProvider] Error generating object", {
+              error: error.message,
+            });
+            return null;
           });
           if (!result) {
             return null;
           }
+          logger?.info("[VercelAIProvider] Repairing tool call result", {
+            output: result?.object,
+          });
 
           return {
             ...toolCall,
-            args: JSON.stringify({
-              action: result.object,
-              reasoning: toolCallResult.args.reasoning,
-            }),
+            args: JSON.stringify(result.object),
           };
         },
         maxSteps: 1,
@@ -156,6 +228,13 @@ export function createVercelAIProvider({
         messages: toCoreMessages(options.messages ?? []),
         maxRetries: 3,
         ...vercelOptions,
+        experimental_repairText: ({ text, error }) => {
+          logger?.warn("[VercelAIProvider] Error generating object", {
+            text,
+            error,
+          });
+          return Promise.resolve(text);
+        },
       });
       return {
         object: result.object as z.infer<T>,

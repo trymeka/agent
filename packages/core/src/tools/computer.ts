@@ -1,8 +1,12 @@
 import z from "zod";
 import type { Tool } from ".";
+import { createAgentLogUpdate } from "../utils/agent-log";
 
 export const parseComputerToolArgs = (args: string) => {
   const parsedArgs = (() => {
+    if (typeof args === "object") {
+      return args;
+    }
     try {
       return JSON.parse(args);
     } catch {
@@ -13,36 +17,45 @@ export const parseComputerToolArgs = (args: string) => {
     return { schema: computerActionSchema, args: null };
   }
   const baseSchema = z.object({
-    action: z.object({
-      type: z.string().describe("Type of action to perform"),
-    }),
+    action: z.union([
+      z.string().describe("Type of action to perform"),
+      z.object({
+        type: z.string().describe("Type of action to perform"),
+      }),
+    ]),
   });
 
   const result = baseSchema.safeParse(parsedArgs);
   if (!result.success) {
     return { schema: computerActionSchema, args: parsedArgs };
   }
-  const type = result.data.action.type;
-  switch (type) {
-    case "click":
-      return { schema: clickActionSchema, args: parsedArgs };
-    case "double_click":
-      return { schema: doubleClickActionSchema, args: parsedArgs };
-    case "drag":
-      return { schema: dragActionSchema, args: parsedArgs };
-    case "keypress":
-      return { schema: keypressActionSchema, args: parsedArgs };
-    case "move":
-      return { schema: moveActionSchema, args: parsedArgs };
-    case "scroll":
-      return { schema: scrollActionSchema, args: parsedArgs };
-    case "type":
-      return { schema: typeActionSchema, args: parsedArgs };
-    case "wait":
-      return { schema: waitActionSchema, args: parsedArgs };
-    default:
-      return null;
+  const actionString =
+    typeof result.data.action === "string"
+      ? result.data.action
+      : result.data.action.type;
+
+  if (actionString.includes("click")) {
+    return { schema: clickActionSchema, args: parsedArgs };
   }
+  if (actionString.includes("double_click")) {
+    return { schema: doubleClickActionSchema, args: parsedArgs };
+  }
+  if (actionString.includes("drag")) {
+    return { schema: dragActionSchema, args: parsedArgs };
+  }
+  if (actionString.includes("keypress")) {
+    return { schema: keypressActionSchema, args: parsedArgs };
+  }
+  if (actionString.includes("move")) {
+    return { schema: moveActionSchema, args: parsedArgs };
+  }
+  if (actionString.includes("scroll")) {
+    return { schema: scrollActionSchema, args: parsedArgs };
+  }
+  if (actionString.includes("type")) {
+    return { schema: typeActionSchema, args: parsedArgs };
+  }
+  return null;
 };
 
 const clickActionSchema = z
@@ -101,18 +114,9 @@ const scrollActionSchema = z
 const typeActionSchema = z
   .object({
     type: z.literal("type").describe("Type of action to perform"),
-    text: z.string().describe("Text to type"),
+    text: z.string().min(1, "Text cannot be empty").describe("Text to type"),
   })
-  .describe("Type a certain text. Text MUST BE non-empty..");
-
-const waitActionSchema = z
-  .object({
-    type: z.literal("wait").describe("Type of action to perform"),
-    duration: z.number().describe("Duration to wait in seconds"),
-  })
-  .describe(
-    "Wait for a certain duration. Normally used to wait for a page to load.",
-  );
+  .describe("Type a certain text. Text MUST BE non-empty.");
 
 export const computerActionSchema = z.union([
   clickActionSchema,
@@ -120,7 +124,6 @@ export const computerActionSchema = z.union([
   scrollActionSchema,
   keypressActionSchema,
   typeActionSchema,
-  waitActionSchema,
   dragActionSchema,
   moveActionSchema,
 ]);
@@ -131,9 +134,32 @@ export interface ComputerActionResult {
   reasoning: string;
   timestamp: string;
 }
-export interface ComputerProvider {
-  /** Takes a screenshot of the environment. */
-  takeScreenshot(sessionId: string): Promise<string>; // Returns base64 image string
+
+// biome-ignore lint/suspicious/noExplicitAny: user defined
+export interface ComputerProvider<T, R = Record<string, any>> {
+  /**
+   * Returns the current URL of the environment.
+   * @param sessionId - The session ID.
+   * @throws {ComputerProviderError} If the sessionId is invalid.
+   * @returns The current URL.
+   */
+  getCurrentUrl(sessionId: string): Promise<string>;
+
+  /**
+   * Takes a screenshot of the environment.
+   * @param sessionId - The session ID.
+   * @throws {ComputerProviderError} If the sessionId is invalid or if the screenshot cannot be taken.
+   * @returns The base64 image string.
+   */
+  takeScreenshot(sessionId: string): Promise<string>;
+
+  /**
+   * Returns the instance of the computer provider to allow for advanced interactions.
+   * @param sessionId - The session ID.
+   * @throws {ComputerProviderError} If the sessionId is invalid.
+   * @returns The instance of the computer provider.
+   */
+  getInstance(sessionId: string): Promise<T>;
 
   getCurrentUrl(sessionId: string): Promise<string | undefined>;
 
@@ -146,6 +172,13 @@ export interface ComputerProvider {
       }) => Promise<{ url: string }>)
     | undefined;
 
+  /**
+   * Navigates to a certain URL.
+   * @param args - The arguments for the navigation.
+   * @throws {ComputerProviderError} If the sessionId is invalid or if the navigation cannot be performed.
+   */
+  navigateTo(args: { sessionId: string; url: string }): Promise<void>;
+
   /** Executes a standard computer action. */
   performAction(
     action: ComputerAction,
@@ -156,11 +189,26 @@ export interface ComputerProvider {
     },
   ): Promise<ComputerActionResult>;
 
-  /** Any necessary setup or teardown logic. */
-  start(sessionId: string): Promise<{
+  /**
+   * Starts a new session.
+   * @param sessionId - The session ID.
+   * @param options - The options for the session to be passed on to the underlying computer provider.
+   * @throws {ComputerProviderError} If the session cannot be started.
+   * @returns The computer provider ID and the live URL if available.
+   */
+  start(
+    sessionId: string,
+    options?: R | undefined,
+  ): Promise<{
     computerProviderId: string;
     liveUrl?: string;
   }>;
+
+  /**
+   * Stops the session.
+   * @param sessionId - The session ID.
+   * @throws {ComputerProviderError} If the session cannot be stopped or if sessionId is invalid.
+   */
   stop(sessionId: string): Promise<void>;
 
   screenSize(): Promise<{ width: number; height: number }>;
@@ -173,19 +221,38 @@ const computerToolSchema = z.object({
     .describe(
       "The reasoning for performing the action. Make sure you provide a clear and concise reasoning for the action so that users can understand what you are doing.",
     ),
+  previousStepEvaluation: z
+    .string()
+    .describe(
+      "Previous step evaluation: Did you achieve the goal you set? What worked? What didn't work?",
+    ),
+  currentStepReasoning: z
+    .string()
+    .describe(
+      "Current step reasoning: What do you see? What's the current state? What needs to be done?",
+    ),
+  nextStepGoal: z
+    .string()
+    .describe(
+      "Next step goal: What specific, actionable goal do you plan to accomplish next?",
+    ),
 });
-export function createComputerTool({
+export type ComputerToolArgs = z.infer<typeof computerToolSchema>;
+
+export function createComputerTool<T>({
   computerProvider,
 }: {
-  computerProvider: ComputerProvider;
-}): Tool<
-  typeof computerToolSchema,
-  ComputerActionResult & { screenshot: string | URL }
-> {
+  computerProvider: ComputerProvider<T>;
+}): Tool<typeof computerToolSchema> & {
+  getCurrentUrl: (context: { sessionId: string }) => Promise<string>;
+} {
   return {
     description:
       "Execute a computer action like clicking, dragging, typing, scrolling, etc. Use this for ALL interactions with the screen.",
     schema: computerToolSchema,
+    getCurrentUrl: (context) => {
+      return computerProvider.getCurrentUrl(context.sessionId);
+    },
     execute: async (args, context) => {
       const result = await computerProvider.performAction(args.action, context);
       const screenshot = await computerProvider.takeScreenshot(
@@ -196,11 +263,61 @@ export function createComputerTool({
         sessionId: context.sessionId,
         step: context.step,
       });
+      // Add planning data to conversation history
+      const planningMessage = `[PLANNING - Step ${context.step}]
+        Previous Step Evaluation: ${args.previousStepEvaluation}
+        Current Step Reasoning: ${args.currentStepReasoning}
+        Next Step Goal: ${args.nextStepGoal}`;
+
+      const response = {
+        role: "user" as const,
+        content: [
+          {
+            type: "text" as const,
+            text: planningMessage,
+          },
+          {
+            type: "text" as const,
+            text: `Computer action on ${result.timestamp}, result: ${result.actionPerformed}. Reasoning: ${result.reasoning} Screenshot as attached.`,
+          },
+          {
+            type: "image" as const,
+            image: screenshotUrl?.url ? new URL(screenshotUrl.url) : screenshot,
+          },
+        ],
+      };
       return {
-        ...result,
-        screenshot: screenshotUrl?.url
-          ? new URL(screenshotUrl.url)
-          : screenshot,
+        type: "response",
+        response,
+        updateCurrentAgentLog: createAgentLogUpdate({
+          toolCallId: context.toolCallId,
+          toolName: "computer_action",
+          args,
+          reasoning: result.reasoning,
+          screenshot: {
+            value:
+              screenshotUrl?.url ?? "[screenshot removed to preserve size]",
+            overrideLogScreenshot: true,
+          },
+          planningData: {
+            previousStepEvaluation: args.previousStepEvaluation,
+            currentStepReasoning: args.currentStepReasoning,
+            nextStepGoal: args.nextStepGoal,
+          },
+          response: {
+            role: "user",
+            content: response.content.map((c) => {
+              if (c.type === "text") {
+                return c;
+              }
+              return {
+                type: "image",
+                image:
+                  screenshotUrl?.url ?? "[screenshot removed to preserve size]",
+              };
+            }),
+          },
+        }),
       };
     },
   };

@@ -31,16 +31,43 @@ export interface AssistantMessage {
 }
 
 export type AgentMessage = UserMessage | AssistantMessage;
+
+export interface PlanningData {
+  previousStepEvaluation?: string;
+  currentStepReasoning: string;
+  nextStepGoal?: string;
+}
+
 export interface AgentLog {
   screenshot: string;
   step: number;
   timestamp: string;
+  currentUrl?: string;
   modelOutput: {
-    done: {
-      type: "text";
-      text: string;
-      reasoning?: string;
-    };
+    done: (
+      | {
+          type: "text";
+          text: string;
+          reasoning?: string;
+        }
+      | {
+          type: "tool_call";
+          toolCallId: string;
+          toolName: string;
+          args: unknown;
+          screenshot?: string;
+          reasoning?: string;
+          result:
+            | {
+                type: "completion";
+                output: unknown;
+              }
+            | {
+                type: "response";
+                response: UserMessage;
+              };
+        }
+    )[];
   };
   usage: {
     model: string;
@@ -48,7 +75,33 @@ export interface AgentLog {
     outputTokensStep?: number | undefined;
     totalTokensStep?: number | undefined;
   };
+  plan?: PlanningData;
 }
+
+/**
+ * A task is a single unit of work that the agent is working on.
+ * It is used to track the state of the task and the logs that are generated.
+ */
+export interface Task<T = unknown> {
+  id: string;
+  instructions: string;
+  result: T;
+  logs: AgentLog[];
+  initialUrl: string | undefined;
+}
+
+/**
+ * A session is a collection of tasks that are related to each other.
+ * It is used to track the state of the agent and the tasks that it is working on.
+ */
+export interface Session {
+  id: string;
+  computerProviderId: string | undefined;
+  liveUrl: string | undefined;
+  status: "queued" | "running" | "idle" | "stopped";
+  tasks: Task[];
+}
+
 /**
  * The result of a `generateText` call.
  */

@@ -1,6 +1,6 @@
 {
   "name": "@trymeka/computer-provider-scrapybara",
-  "version": "0.0.7",
+  "version": "0.0.17",
   "type": "module",
   "publishConfig": {
     "access": "public"
@@ -30,6 +30,7 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
+    "@trymeka/computer-provider-core": "workspace:*",
     "@trymeka/core": "workspace:*",
     "scrapybara": "^2.5.2"
   },
@@ -38,6 +39,7 @@
   },
   "devDependencies": {
     "@trymeka/typescript": "workspace:*",
+    "playwright-core": "^1.54.1",
     "tsup": "^8.5.0",
     "typescript": "^5.8.3"
   }

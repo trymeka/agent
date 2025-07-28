@@ -1,10 +1,10 @@
 import type { z } from "zod";
-import type { AgentMessage } from "../ai";
+import type { AgentLog, AgentMessage, UserMessage } from "../ai";
 
 /**
  * Defines a tool that the agent can execute.
  */
-export interface Tool<T extends z.ZodSchema, Output> {
+export interface Tool<T extends z.ZodSchema, Output = never> {
   /** A description of what the tool does, for use by the AI model. */
   description: string;
 
@@ -20,7 +20,14 @@ export interface Tool<T extends z.ZodSchema, Output> {
       step: number;
       messages: AgentMessage[];
     },
-  ): Promise<Output>;
+  ): Promise<
+    | { type: "completion"; output: Output }
+    | {
+        type: "response";
+        response: UserMessage;
+        updateCurrentAgentLog?: (log: AgentLog) => AgentLog;
+      }
+  >;
 }
 
 export { createCompleteTaskTool } from "./complete-task";
@@ -30,6 +37,7 @@ export {
   type ComputerAction,
   type ComputerActionResult,
 } from "./computer";
+export { createWaitTool } from "./wait";
 export {
   createMemoryTool,
   type MemoryStore,

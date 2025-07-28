@@ -4,10 +4,6 @@ import { createScrapybaraComputerProvider } from "@trymeka/computer-provider-scr
 import { createAgent } from "@trymeka/core/ai/agent";
 import { z } from "zod";
 
-/**
- * This example shows how to use the Anthropic model to run a task.
- */
-
 if (!process.env.SCRAPYBARA_API_KEY) {
   throw new Error("SCRAPYBARA_API_KEY is not set");
 }
@@ -33,8 +29,15 @@ const agent = createAgent({
 
 const session = await agent.initializeSession();
 console.log("session live url", session.get()?.liveUrl);
+
 const task = await session.runTask({
   instructions: "Summarize the top 3 articles",
+  onStepComplete: (args) => {
+    console.log("Step", JSON.stringify(args, null, 2));
+  },
+  onTaskComplete: (args) => {
+    console.log("Complete", JSON.stringify(args, null, 2));
+  },
   outputSchema: z.object({
     articles: z.array(
       z.object({
@@ -45,7 +48,6 @@ const task = await session.runTask({
     ),
   }),
 });
-
 console.log("Task", JSON.stringify(task.result, null, 2));
 
 await session.end();
