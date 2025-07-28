@@ -138,6 +138,9 @@ importers:
       '@e2b/desktop':
         specifier: ^1.9.2
         version: 1.9.2
+      '@trymeka/computer-provider-core':
+        specifier: workspace:*
+        version: link:../computer-provider-core
       '@trymeka/core':
         specifier: workspace:*
         version: link:../core

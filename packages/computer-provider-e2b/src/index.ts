@@ -1,5 +1,7 @@
 import { Buffer } from "node:buffer";
-import type { Sandbox } from "@e2b/desktop";
+import type { Sandbox, SandboxOpts } from "@e2b/desktop";
+import { getInstance } from "@trymeka/computer-provider-core";
+import { DEFAULT_SCREEN_SIZE } from "@trymeka/computer-provider-core/constants";
 import {
   type ComputerAction,
   type ComputerActionResult,
@@ -9,49 +11,13 @@ import {
 import { type Logger, createNoOpLogger } from "@trymeka/core/utils/logger";
 import { retryWithExponentialBackoff } from "@trymeka/core/utils/retry";
 
-const SCROLL_PIXELS_PER_UNIT = 120; // Standard scroll wheel units
-
-// Key mapping for common keys
-const KEY_MAPPING: Record<string, string> = {
-  "/": "slash",
-  "\\": "backslash",
-  alt: "alt",
-  arrowdown: "down",
-  arrowleft: "left",
-  arrowright: "right",
-  arrowup: "up",
-  backspace: "backspace",
-  capslock: "caps_lock",
-  cmd: "cmd",
-  ctrl: "ctrl",
-  delete: "delete",
-  end: "end",
-  enter: "enter",
-  esc: "escape",
-  escape: "escape",
-  home: "home",
-  insert: "insert",
-  option: "alt",
-  pagedown: "page_down",
-  pageup: "page_up",
-  shift: "shift",
-  space: "space",
-  super: "super",
-  tab: "tab",
-  win: "super",
-};
-
-function mapKeys(keys: string[]): string[] {
-  return keys.map((key) => KEY_MAPPING[key.toLowerCase()] || key.toLowerCase());
-}
-
 const shouldRetryE2B = (_: unknown): boolean => {
   // just throw everything for now
   return false;
 };
 
 export function createE2BComputerProvider(options: {
-  apiKey?: string;
+  apiKey: string;
   uploadScreenshot?: (options: {
     screenshotBase64: string;
     sessionId: string;
@@ -60,103 +26,101 @@ export function createE2BComputerProvider(options: {
   screenSize?: { width: number; height: number };
   initialUrl?: string;
   logger?: Logger;
-}): ComputerProvider {
+}): ComputerProvider<
+  {
+    sandbox: Sandbox;
+  },
+  SandboxOpts
+> {
   const logger = options.logger ?? createNoOpLogger();
-  const screenSize = options.screenSize ?? { width: 1600, height: 900 };
+  const screenSize = options.screenSize ?? DEFAULT_SCREEN_SIZE;
   const sessionMap = new Map<string, { sandbox: Sandbox }>();
 
   return {
     async screenSize() {
       return await Promise.resolve(screenSize);
     },
+    getInstance(sessionId: string) {
+      return Promise.resolve(getInstance(sessionId, sessionMap));
+    },
+    async navigateTo({ sessionId, url }) {
+      const { sandbox } = getInstance(sessionId, sessionMap);
+      await sandbox.press("ctrl+l");
+      await sandbox.write(url);
+      await sandbox.press("enter");
+    },
     uploadScreenshot: options.uploadScreenshot
       ? options.uploadScreenshot
       : undefined,
     async getCurrentUrl(sessionId: string) {
-      const result = sessionMap.get(sessionId);
-      if (!result) {
-        throw new ComputerProviderError(
-          `No E2B sandbox found for sessionId ${sessionId}`,
-        );
-      }
-      // TODO: FIGURE THIS OUT
-      try {
-        return await Promise.resolve(result.sandbox.stream.getUrl());
-      } catch {
-        return "";
-      }
+      const { sandbox } = getInstance(sessionId, sessionMap);
+      const info = await sandbox.getInfo();
+      console.log(info);
+      await sandbox.press(["ctrl", "l"]);
+      await sandbox.press(["ctrl", "c"]);
+      const commandResult = await sandbox.commands.run(
+        "    xsel --clipboard --output",
+      );
+      logger.info("[ComputerProvider] Current URL", {
+        commandResult: commandResult,
+      });
+      return commandResult.stdout;
     },
-    async start(sessionId: string) {
+    async start(sessionId, browserOptions) {
       logger.info("[ComputerProvider] Starting E2B Desktop Sandbox");
 
       const { Sandbox } = await import("@e2b/desktop");
 
-      const apiKey = options.apiKey || process.env.E2B_API_KEY;
-      if (!apiKey) {
-        throw new ComputerProviderError("E2B API key is required");
-      }
       const sandbox = await Sandbox.create({
-        apiKey,
-        timeoutMs: 300000, // 5 minutes
+        apiKey: options.apiKey,
         metadata: { sessionId },
         resolution: [screenSize.width, screenSize.height],
         logger,
+        ...browserOptions,
       });
 
       logger.info("[ComputerProvider] E2B sandbox started", { sessionId });
 
+      await sandbox.launch("google-chrome");
+      await sandbox.wait(5_000); // Wait 5s for app to start
+      logger.info("[ComputerProvider] Launched google chrome");
+
       // Launch initial applications if specified
       if (options.initialUrl) {
-        try {
-          await sandbox.launch(options.initialUrl);
-          logger.info(
-            `[ComputerProvider] Launched application: ${options.initialUrl}`,
-          );
-          await sandbox.wait(2000); // Wait for app to start
-        } catch (error) {
-          logger.warn(
-            `[ComputerProvider] Failed to launch ${options.initialUrl}:`,
-            error,
-          );
-        }
+        await sandbox.write(options.initialUrl);
+        await sandbox.press("Enter");
       }
-      const liveUrl = sandbox.stream.getUrl();
 
+      await sandbox.stream.start({
+        requireAuth: true,
+        windowId: await sandbox.getCurrentWindowId(),
+      });
+      const streamAuthKey = await sandbox.stream.getAuthKey();
+      const liveUrl = sandbox.stream.getUrl({
+        authKey: streamAuthKey,
+      });
       sessionMap.set(sessionId, { sandbox });
 
       return {
-        computerProviderId: sessionId,
+        computerProviderId: sandbox.sandboxId,
         liveUrl,
       };
     },
 
     async stop(sessionId: string) {
-      const result = sessionMap.get(sessionId);
-      if (!result) {
-        throw new ComputerProviderError(
-          `No E2B sandbox found for sessionId ${sessionId}`,
-        );
-      }
+      const { sandbox } = getInstance(sessionId, sessionMap);
 
-      try {
-        await result.sandbox.stream.stop();
-      } catch (error) {
-        logger.warn("[ComputerProvider] Failed to stop stream:", error);
-      }
+      await sandbox.stream.stop();
+      await sandbox.kill();
 
       sessionMap.delete(sessionId);
     },
 
     async takeScreenshot(sessionId: string) {
-      const result = sessionMap.get(sessionId);
-      if (!result) {
-        throw new ComputerProviderError(
-          `No E2B sandbox found for sessionId ${sessionId}`,
-        );
-      }
+      const { sandbox } = getInstance(sessionId, sessionMap);
 
       const screenshot = await retryWithExponentialBackoff({
-        fn: () => result.sandbox.screenshot(),
+        fn: () => sandbox.screenshot(),
         shouldRetryError: shouldRetryE2B,
       });
 
@@ -168,13 +132,7 @@ export function createE2BComputerProvider(options: {
       action: ComputerAction,
       context: { sessionId: string; step: number; reasoning?: string },
     ): Promise<ComputerActionResult> {
-      const result = sessionMap.get(context.sessionId);
-      if (!result) {
-        throw new ComputerProviderError(
-          `No E2B sandbox found for sessionId ${context.sessionId}`,
-        );
-      }
-      const { sandbox } = result;
+      const { sandbox } = getInstance(context.sessionId, sessionMap);
 
       return await retryWithExponentialBackoff({
         fn: async () => {
@@ -194,8 +152,9 @@ export function createE2BComputerProvider(options: {
                   await sandbox.middleClick(x, y);
                   break;
                 default:
-                  await sandbox.leftClick(x, y);
-                  break;
+                  throw new ComputerProviderError(
+                    `Unsupported button: ${button}`,
+                  );
               }
 
               return {
@@ -223,12 +182,7 @@ export function createE2BComputerProvider(options: {
               const { x, y, scroll_x: scrollX, scroll_y: scrollY } = action;
 
               // TODO: Figure out how to handle scrollX
-              // E2B scroll expects scroll units, convert from pixels
-              const scrollAmount = Math.abs(
-                Math.round(scrollY / SCROLL_PIXELS_PER_UNIT),
-              );
-
-              await sandbox.scroll(scrollY > 0 ? "down" : "up", scrollAmount);
+              await sandbox.scroll(scrollY > 0 ? "down" : "up", scrollY);
               return {
                 type: "scroll",
                 actionPerformed: `Scrolled by (scrollX=${scrollX}, scrollY=${scrollY}) at mouse position (${x},${y})`,
@@ -240,21 +194,13 @@ export function createE2BComputerProvider(options: {
             }
             case "keypress": {
               const { keys } = action;
-              const mappedKeys = mapKeys(keys);
-              if (mappedKeys.length === 0) {
-                throw new Error("No keys to press");
-              }
-              const keyToPress =
-                mappedKeys.length === 1 ? mappedKeys[0] : mappedKeys;
-              if (!keyToPress) {
-                throw new Error("No valid key to press");
-              }
-              await sandbox.press(keyToPress);
+              await sandbox.press(keys);
+
               return {
                 type: "keypress",
-                actionPerformed: `Pressed keys: ${mappedKeys.join("+")}`,
+                actionPerformed: `Pressed keys: ${keys.join("+")}`,
                 reasoning:
-                  context.reasoning ?? `Pressed keys: ${mappedKeys.join("+")}`,
+                  context.reasoning ?? `Pressed keys: ${keys.join("+")}`,
                 timestamp: new Date().toISOString(),
               };
             }
@@ -268,36 +214,33 @@ export function createE2BComputerProvider(options: {
                 timestamp: new Date().toISOString(),
               };
             }
-            case "wait": {
-              await sandbox.wait(2000); // Wait for 2 seconds
-              return {
-                type: "wait",
-                actionPerformed: "Waited for 2 seconds",
-                reasoning: context.reasoning ?? "Waited for 2 seconds",
-                timestamp: new Date().toISOString(),
-              };
-            }
+
             case "drag": {
               const { path } = action;
-              if (!path || path.length < 2) {
-                throw new Error("Drag path invalid for computer action.");
+              if (path.length < 2) {
+                throw new ComputerProviderError(
+                  "Drag path invalid for computer action.",
+                );
               }
 
               const firstPoint = path[0];
               const lastPoint = path[path.length - 1];
               if (!firstPoint || !lastPoint) {
-                throw new Error("Invalid drag path: missing points");
+                throw new ComputerProviderError(
+                  "Bad drag path: Drag path invalid for computer action.",
+                );
               }
-              const from: [number, number] = [firstPoint.x, firstPoint.y];
-              const to: [number, number] = [lastPoint.x, lastPoint.y];
 
-              await sandbox.drag(from, to);
+              await sandbox.drag(
+                [firstPoint.x, firstPoint.y],
+                [lastPoint.x, lastPoint.y],
+              );
               return {
                 type: "drag",
-                actionPerformed: `Dragged mouse from (${from[0]},${from[1]}) to (${to[0]},${to[1]})`,
+                actionPerformed: `Dragged mouse from (${firstPoint.x},${firstPoint.y}) to (${lastPoint.x},${lastPoint.y})`,
                 reasoning:
                   context.reasoning ??
-                  `Dragged mouse from (${from[0]},${from[1]}) to (${to[0]},${to[1]})`,
+                  `Dragged mouse from (${firstPoint.x},${firstPoint.y}) to (${lastPoint.x},${lastPoint.y})`,
                 timestamp: new Date().toISOString(),
               };
             }
@@ -310,6 +253,10 @@ export function createE2BComputerProvider(options: {
                 reasoning: context.reasoning ?? `Moved mouse to (${x}, ${y})`,
                 timestamp: new Date().toISOString(),
               };
+            }
+            default: {
+              const _never: never = action;
+              throw new Error("Unsupported action type.");
             }
           }
         },
