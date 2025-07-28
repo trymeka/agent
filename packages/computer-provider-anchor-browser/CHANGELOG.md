@@ -1,5 +1,11 @@
 # @trymeka/computer-provider-anchor-browser
 
+## 0.0.5
+
+### Patch Changes
+
+- 8ae8a42: chore(computer-provider-anchor-browser): add better support for keymap in anchor browser
+
 ## 0.0.4
 
 ### Patch Changes
