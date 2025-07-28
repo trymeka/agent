@@ -1,5 +1,11 @@
 # @trymeka/computer-provider-core
 
+## 0.0.5
+
+### Patch Changes
+
+- 0a683d0: chore(computer-provider-core): refactor utility to get instance into core package
+
 ## 0.0.4
 
 ### Patch Changes
