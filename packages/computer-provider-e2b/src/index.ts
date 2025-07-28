@@ -1,5 +1,4 @@
 import { Buffer } from "node:buffer";
-import { writeFileSync } from "node:fs";
 import type { Sandbox, SandboxOpts } from "@e2b/desktop";
 import { getInstance } from "@trymeka/computer-provider-core";
 import { DEFAULT_SCREEN_SIZE } from "@trymeka/computer-provider-core/constants";
@@ -133,7 +132,6 @@ export function createE2BComputerProvider(options: {
         shouldRetryError: shouldRetryE2B,
       });
 
-      writeFileSync("screenshot.png", screenshot);
       const base64 = Buffer.from(screenshot).toString("base64");
       return base64;
     },

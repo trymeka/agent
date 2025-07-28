@@ -1,5 +1,4 @@
 import { Buffer } from "node:buffer";
-import { writeFileSync } from "node:fs";
 import { getInstance, getPage } from "@trymeka/computer-provider-core";
 import { DEFAULT_SCREEN_SIZE } from "@trymeka/computer-provider-core/constants";
 import {
@@ -303,7 +302,6 @@ export function createAnchorBrowserComputerProvider(options: {
 
       const screenshot = await response.arrayBuffer();
       const b64 = Buffer.from(screenshot).toString("base64");
-      writeFileSync("screenshot.png", Buffer.from(screenshot));
       return b64;
     },
     async performAction(

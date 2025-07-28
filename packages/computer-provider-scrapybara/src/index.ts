@@ -1,5 +1,3 @@
-import { Buffer } from "node:buffer";
-import { writeFileSync } from "node:fs";
 import { getPage } from "@trymeka/computer-provider-core";
 import { DEFAULT_SCREEN_SIZE } from "@trymeka/computer-provider-core/constants";
 import {
@@ -202,8 +200,6 @@ export function createScrapybaraComputerProvider(options: {
         fn: () => result.instance.screenshot(),
         shouldRetryError: shouldRetryScrapybara,
       });
-      const buffer = Buffer.from(screenshot.base64Image, "base64");
-      writeFileSync("screenshot.png", buffer);
       return screenshot.base64Image;
     },
 
