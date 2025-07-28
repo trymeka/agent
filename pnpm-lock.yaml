@@ -53,6 +53,9 @@ importers:
       '@trymeka/computer-provider-anchor-browser':
         specifier: workspace:*
         version: link:../packages/computer-provider-anchor-browser
+      '@trymeka/computer-provider-e2b':
+        specifier: workspace:*
+        version: link:../packages/computer-provider-e2b
       '@trymeka/computer-provider-scrapybara':
         specifier: workspace:*
         version: link:../packages/computer-provider-scrapybara

@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer";
+import { writeFileSync } from "node:fs";
 import type { Sandbox, SandboxOpts } from "@e2b/desktop";
 import { getInstance } from "@trymeka/computer-provider-core";
 import { DEFAULT_SCREEN_SIZE } from "@trymeka/computer-provider-core/constants";
@@ -48,18 +49,18 @@ export function createE2BComputerProvider(options: {
       await sandbox.press("ctrl+l");
       await sandbox.write(url);
       await sandbox.press("enter");
+      await sandbox.wait(2_000); // Wait 2s for navigation to complete
     },
     uploadScreenshot: options.uploadScreenshot
       ? options.uploadScreenshot
       : undefined,
     async getCurrentUrl(sessionId: string) {
+      // TODO: Figure out how to get the current URL without using a command
       const { sandbox } = getInstance(sessionId, sessionMap);
-      const info = await sandbox.getInfo();
-      console.log(info);
       await sandbox.press(["ctrl", "l"]);
       await sandbox.press(["ctrl", "c"]);
       const commandResult = await sandbox.commands.run(
-        "    xsel --clipboard --output",
+        "xsel --clipboard --output",
       );
       logger.info("[ComputerProvider] Current URL", {
         commandResult: commandResult,
@@ -84,11 +85,17 @@ export function createE2BComputerProvider(options: {
       await sandbox.launch("google-chrome");
       await sandbox.wait(5_000); // Wait 5s for app to start
       logger.info("[ComputerProvider] Launched google chrome");
+      await sandbox.commands.run(
+        "sudo apt-get update && sudo apt-get install -y xsel",
+      );
 
       // Launch initial applications if specified
       if (options.initialUrl) {
         await sandbox.write(options.initialUrl);
         await sandbox.press("Enter");
+        logger.info("[ComputerProvider] Navigated to initial URL", {
+          initialUrl: options.initialUrl,
+        });
       }
 
       await sandbox.stream.start({
@@ -124,8 +131,9 @@ export function createE2BComputerProvider(options: {
         shouldRetryError: shouldRetryE2B,
       });
 
-      // Convert Buffer to base64 string
-      return Buffer.from(screenshot).toString("base64");
+      writeFileSync("screenshot.png", screenshot);
+      const base64 = Buffer.from(screenshot).toString("base64");
+      return base64;
     },
 
     async performAction(
@@ -181,8 +189,12 @@ export function createE2BComputerProvider(options: {
             case "scroll": {
               const { x, y, scroll_x: scrollX, scroll_y: scrollY } = action;
 
+              // arbitrary number of 100 pixels per notch
+              const scrollYNotches = Math.floor(scrollY / 100) || 1;
+
               // TODO: Figure out how to handle scrollX
-              await sandbox.scroll(scrollY > 0 ? "down" : "up", scrollY);
+              await sandbox.moveMouse(x, y);
+              await sandbox.scroll(scrollY > 0 ? "down" : "up", scrollYNotches);
               return {
                 type: "scroll",
                 actionPerformed: `Scrolled by (scrollX=${scrollX}, scrollY=${scrollY}) at mouse position (${x},${y})`,
