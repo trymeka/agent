@@ -1,5 +1,13 @@
 # @trymeka/computer-provider-anchor-browser
 
+## 0.0.6
+
+### Patch Changes
+
+- 0a683d0: chore(computer-provider-core): refactor utility to get instance into core package
+- Updated dependencies [0a683d0]
+  - @trymeka/computer-provider-core@0.0.5
+
 ## 0.0.5
 
 ### Patch Changes
