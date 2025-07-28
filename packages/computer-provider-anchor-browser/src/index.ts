@@ -409,7 +409,14 @@ export function createAnchorBrowserComputerProvider(options: {
             path: "/keyboard/shortcut",
             body: {
               keys: keys.map(
-                (k) => CUA_KEY_TO_PLAYWRIGHT_KEY[k.toLowerCase()] ?? k,
+                (k) =>
+                  // We try to map the keys from the LLM to the anchor browser keys.
+                  CUA_KEY_TO_PLAYWRIGHT_KEY[k.toLowerCase()] ??
+                  // If the key map didn't succeed, we try to use the key as is.
+                  // If the key is a single character, we convert it to lowercase. This is so that keys like CTRL A -> ctrl+a, CTRL L -> ctrl+l, etc.
+                  // If the key is a multi-character key, we use the key as is. These Keys are often some modifier keys like CTRL, SHIFT, etc. that was missed in the mapping above. These keys will likely throw an error in the anchor browser.
+                  // We handle that by catching the error and returning null. The LLM should then retry with a different set of keys/action.
+                  (k.length === 1 ? k.toLowerCase() : k),
               ),
             },
           }).catch((e) => {
