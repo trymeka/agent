@@ -1,5 +1,15 @@
 # @trymeka/computer-provider-anchor-browser
 
+## 0.0.7
+
+### Patch Changes
+
+- 83a4200: docs: add inline documentation to various functions
+- Updated dependencies [83a4200]
+- Updated dependencies [e4a41ec]
+  - @trymeka/computer-provider-core@0.0.6
+  - @trymeka/core@0.0.18
+
 ## 0.0.6
 
 ### Patch Changes

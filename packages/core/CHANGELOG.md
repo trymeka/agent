@@ -1,5 +1,12 @@
 # @trymeka/core
 
+## 0.0.18
+
+### Patch Changes
+
+- 83a4200: docs: add inline documentation to various functions
+- e4a41ec: feat(core): add screenshot after waiting
+
 ## 0.0.17
 
 ### Patch Changes
