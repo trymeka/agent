@@ -86,13 +86,16 @@ Meka is created from lessons learned from experimentation and publicly available
 - **Vision-first Approach**: Captures complex websites more effectively than approaches that use DOM-based navigation or identification.
 - **VM Controls Over Browser Layer**: Provides better handling of system-level elements and alerts.
 - **Effective Memory Management**:
-  - Avoid passing excessive context to maintain agent performance. Providing 5-7 past steps in each iteration of the loop was the sweet spot for us.
-  - Track crucial memory separately for accumulating essential results.
+  - Short term memory: Avoid passing excessive context to maintain agent performance. Providing 5-7 past steps in each iteration of the loop was the sweet spot for us.
+  - Long term memory: Track crucial memory separately for accumulating essential results.
 - **Vision Model Selection**:
   - Vision models with strong visual grounding work effectively on their own.
   - Vision models without strong grounding benefit from additional tools (e.g., Omniparser) or a layered manager-executor model. This was tested but not implemented in this repo due to speed and cost concerns.
 - **LLM as a Judge**: Employ LLM evaluation during iterations inspired by [Reflexion](https://arxiv.org/pdf/2303.11366) and [related research](https://arxiv.org/abs/2404.06474).
 - **Stepwise Planning**: Consistent planning after each step significantly boosts performance ([source](https://arxiv.org/abs/2506.06698)).
+- **Mixture of Models**: Use two Ground Models that take turns generating responses. The output from one model serves as part of the input for the next, creating an iterative refinement process.
+
+For more details, visit our blog post on the Meka Agent.
 
 ## Key Features
 
