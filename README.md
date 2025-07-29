@@ -10,7 +10,7 @@ The agent primarily focuses on web browsing today, and achieves state-of-the-art
 
 <img width="451" height="321" alt="Frame 70 (2)" src="https://github.com/user-attachments/assets/45ba645c-7bb3-458d-af8a-9cb6cf689510" />
 
-Read more about the details of the benchmark results here.
+[Read more](https://blog.withmeka.com/meka-achieves-state-of-the-art-performance-for-computer-use/) about the details of the benchmark results.
 
 ## Meka App
 
@@ -81,21 +81,9 @@ For more usage examples, check out [/examples](/examples/).
 
 ## Agent Design
 
-Meka is created from lessons learned from experimentation and publicly available research. Our fundamental philosophy in creating this agent is to think like how humans would, from vision to tools to memory. Here are some of the most important learnings:
+Meka is created from lessons learned from experimentation and publicly available research. Our fundamental philosophy in creating this agent is to think like how humans would, from vision to tools to memory. 
 
-- **Vision-first Approach**: Captures complex websites more effectively than approaches that use DOM-based navigation or identification.
-- **VM Controls Over Browser Layer**: Provides better handling of system-level elements and alerts.
-- **Effective Memory Management**:
-  - Short term memory: Avoid passing excessive context to maintain agent performance. Providing 5-7 past steps in each iteration of the loop was the sweet spot for us.
-  - Long term memory: Track crucial memory separately for accumulating essential results.
-- **Vision Model Selection**:
-  - Vision models with strong visual grounding work effectively on their own.
-  - Vision models without strong grounding benefit from additional tools (e.g., Omniparser) or a layered manager-executor model. This was tested but not implemented in this repo due to speed and cost concerns.
-- **LLM as a Judge**: Employ LLM evaluation during iterations inspired by [Reflexion](https://arxiv.org/pdf/2303.11366) and [related research](https://arxiv.org/abs/2404.06474).
-- **Stepwise Planning**: Consistent planning after each step significantly boosts performance ([source](https://arxiv.org/abs/2506.06698)).
-- **Mixture of Models**: Use two Ground Models that take turns generating responses. The output from one model serves as part of the input for the next, creating an iterative refinement process.
-
-For more details, visit our blog post on the Meka Agent.
+For more details, [visit our blog post](https://blog.withmeka.com/introducing-meka-an-open-source-framework-for-building-autonomous-computer-agents/) on the Meka Agent.
 
 ## Key Features
 
