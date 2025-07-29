@@ -182,7 +182,15 @@ export function createAgent<T, R>(options: {
           complete_task: createCompleteTaskTool({
             ground,
             evaluator,
-            outputSchema: task.outputSchema ?? z.object({ value: z.string() }),
+            outputSchema:
+              task.outputSchema ??
+              z.object({
+                value: z
+                  .string()
+                  .describe(
+                    "Follow this with the result of the task pertaining to the user's instructions. DO NOT describe what you did. Instead, regurgitate the result of the task that the user asked for.",
+                  ),
+              }),
             currentInstruction: task.instructions,
           }),
           memory: createMemoryTool({
