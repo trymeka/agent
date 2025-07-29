@@ -68,6 +68,20 @@ const shouldRetryScrapybara = (error: unknown): boolean => {
   return false;
 };
 
+/**
+ * Creates a computer provider that interacts with Scrapybara.
+ * This provider is responsible for managing browser instances, handling user actions,
+ * and providing screenshots of the browser's state. It uses Playwright for browser
+ * automation and communicates with the Scrapybara API.
+ *
+ * @param options - The configuration options for the Scrapybara computer provider.
+ * @param options.apiKey - The API key for accessing Scrapybara.
+ * @param options.uploadScreenshot - An optional function to upload screenshots after each step. If not provided, screenshots will be kept in base64 format.
+ * @param options.screenSize - Override for the screen size of the browser window. Defaults to 1366x768.
+ * @param options.initialUrl - The initial URL to navigate to when a session starts.
+ * @param options.logger - An optional logger for logging internal events.
+ * @returns A `ComputerProvider` instance configured for Scrapybara.
+ */
 export function createScrapybaraComputerProvider(options: {
   apiKey: string;
   uploadScreenshot?: (options: {

@@ -2,7 +2,16 @@ import z from "zod";
 import type { Tool } from ".";
 import { createAgentLogUpdate } from "../utils/agent-log";
 
-export const parseComputerToolArgs = (args: string) => {
+/**
+ * Parses the arguments for a computer tool call and returns the appropriate schema and arguments.
+ * This function is used to dynamically determine the correct Zod schema based on the args and return as specific of a schema as possible.
+ * This allows us to try and fix the incoming args as needed.
+ *
+ * @param args - The arguments for the computer tool call, which can be a JSON string or an object.
+ * @returns An object containing the appropriate Zod schema and the parsed arguments, or null if the action is unknown.
+ * @internal
+ */
+export const parseComputerToolArgs = (args: string | object) => {
   const parsedArgs = (() => {
     if (typeof args === "object") {
       return args;
@@ -127,7 +136,16 @@ export const computerActionSchema = z.union([
   dragActionSchema,
   moveActionSchema,
 ]);
+/**
+ * Represents an action that can be performed by the computer, such as clicking, typing, or scrolling.
+ * This type is a union of all possible computer action schemas.
+ */
 export type ComputerAction = z.infer<typeof computerActionSchema>;
+
+/**
+ * Represents the result of a computer action, including the type of action performed, a description of what was done,
+ * the reasoning behind the action, and a timestamp.
+ */
 export interface ComputerActionResult {
   type: ComputerAction["type"];
   actionPerformed: string;
@@ -135,6 +153,14 @@ export interface ComputerActionResult {
   timestamp: string;
 }
 
+/**
+ * An interface for a computer provider, which is responsible for interacting with a remote environment,
+ * such as a browser or a desktop. This allows the agent to perform actions like navigating to URLs,
+ * taking screenshots, and executing user-like interactions.
+ *
+ * @template T - The type of the underlying instance managed by the provider (e.g., a Playwright Browser).
+ * @template R - The type of the options that can be passed when starting a new session.
+ */
 // biome-ignore lint/suspicious/noExplicitAny: user defined
 export interface ComputerProvider<T, R = Record<string, any>> {
   /**
@@ -161,9 +187,19 @@ export interface ComputerProvider<T, R = Record<string, any>> {
    */
   getInstance(sessionId: string): Promise<T>;
 
+  /**
+   * Returns the current URL of the browser, or undefined if not applicable.
+   * @param sessionId The ID of the current session.
+   * @returns A promise that resolves to the current URL or undefined.
+   */
   getCurrentUrl(sessionId: string): Promise<string | undefined>;
 
-  /** Uploads a screenshot and returns its public URL. */
+  /**
+   * Uploads a screenshot and returns its public URL. If not provided, screenshots will be kept in base64 format.
+   * Note that the url returned should be accessible by the agent for the duration of the task.
+   * @param options - The options for uploading the screenshot.
+   * @returns A promise that resolves to an object containing the URL of the uploaded screenshot.
+   */
   uploadScreenshot:
     | ((options: {
         screenshotBase64: string;
@@ -179,7 +215,16 @@ export interface ComputerProvider<T, R = Record<string, any>> {
    */
   navigateTo(args: { sessionId: string; url: string }): Promise<void>;
 
-  /** Executes a standard computer action. */
+  /**
+   * Executes a standard computer action.
+   * @param action - The computer action to perform.
+   * @param context - Additional context for the action, such as session ID and step number.
+   * @param context.reasoning - The reasoning for the action.
+   * @param context.sessionId - The session ID.
+   * @param context.step - The step number.
+   * @throws {ComputerProviderError} If the sessionId is invalid or if the action cannot be performed.
+   * @returns The result of the action.
+   */
   performAction(
     action: ComputerAction,
     context: {
@@ -211,6 +256,10 @@ export interface ComputerProvider<T, R = Record<string, any>> {
    */
   stop(sessionId: string): Promise<void>;
 
+  /**
+   * Returns the screen size of the environment.
+   * @returns The width and height of the screen.
+   */
   screenSize(): Promise<{ width: number; height: number }>;
 }
 
@@ -239,10 +288,19 @@ const computerToolSchema = z.object({
 });
 export type ComputerToolArgs = z.infer<typeof computerToolSchema>;
 
-export function createComputerTool<T>({
+/**
+ * Creates a tool that allows the agent to perform computer actions.
+ * This tool is a wrapper around a `ComputerProvider` and provides a standardized
+ * way for the agent to interact with the computer.
+ *
+ * @param options - The options for creating the computer tool.
+ * @param options.computerProvider - The computer provider to use for performing actions.
+ * @returns A tool that can be used by the agent to perform computer actions.
+ */
+export function createComputerTool<T, R>({
   computerProvider,
 }: {
-  computerProvider: ComputerProvider<T>;
+  computerProvider: ComputerProvider<T, R>;
 }): Tool<typeof computerToolSchema> & {
   getCurrentUrl: (context: { sessionId: string }) => Promise<string>;
 } {

@@ -1,3 +1,8 @@
+/**
+ * Represents an error that occurs within an AI provider.
+ * This error is thrown when there is an issue with the AI model's response,
+ * such as a failure to generate text or a problem with the provider's service.
+ */
 export class AIProviderError extends Error {
   constructor(message: string, options?: { cause?: unknown }) {
     super(
@@ -15,6 +20,11 @@ export class AIProviderError extends Error {
   }
 }
 
+/**
+ * Represents an error that occurs within the agent's logic.
+ * This error is thrown for issues related to session management, task execution,
+ * or other agent-specific operations that are not directly tied to the AI provider.
+ */
 export class AgentError extends Error {
   constructor(message: string, options?: { cause?: unknown }) {
     super(
