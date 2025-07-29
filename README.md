@@ -21,7 +21,7 @@ If you would like to get started with browser automations without any setup, vis
 To get started with Meka, we packaged various providers that we have extensively tested. There are two main pieces:
 
 - A vision model that has **good visual grounding**. From our experimentation, OpenAI o3, Claude Sonnet 4, and Claude Opus 4 are the best US-based models. We have not experimented with Chinese-based models but would love to see contributions!
-- An infrastructure provider that exposes OS-level controls, not just a browser layer with Playwright screenshots. This is important for performance as a number of common web elements are rendered at the system level, invisible to the browser page. One example is native select menus. Such shortcoming severely handicapping the vision-first approach.
+- An infrastructure provider that exposes OS-level controls, not just a browser layer with Playwright screenshots. This is important for performance as a number of common web elements are rendered at the system level, invisible to the browser page. (Examples include dropdown menus, browser alerts, file uploads, and more)
 
 To get started, we choose OpenAI o3 as the model and Anchor Browser as the VM-based infrastructure provider. We are open to submissions by other infra providers with OS-level controls!
 
