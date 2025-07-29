@@ -16,6 +16,8 @@ Read more about the details of the benchmark results here.
 
 If you would like to get started with browser automations without any setup, visit the [Meka App](https://withmeka.com) to try the Meka Agent with $10 in free credits.
 
+<img width="472" height="254" alt="Screenshot 2025-07-29 at 3 49 16 PM" src="https://github.com/user-attachments/assets/5b17909c-4606-4b2a-8326-b0ae0cc11d02" />
+
 ## Getting Started
 
 To get started with Meka, we packaged various providers that we have extensively tested. There are two main pieces:
