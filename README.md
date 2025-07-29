@@ -8,7 +8,7 @@ It is designed as a simple, extensible, and customizable framework, allowing fle
 
 The agent primarily focuses on web browsing today, and achieves state-of-the-art benchmark results in the WebArena Benchmark (72.7%).
 
-<img width="1804" height="1282" alt="Frame 70 (2)" src="https://github.com/user-attachments/assets/45ba645c-7bb3-458d-af8a-9cb6cf689510" />
+<img width="902" height="641" alt="Frame 70 (2)" src="https://github.com/user-attachments/assets/45ba645c-7bb3-458d-af8a-9cb6cf689510" />
 
 Read more about the details of the benchmark results here.
 
