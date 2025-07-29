@@ -188,7 +188,9 @@ export function createAgent<T, R>(options: {
           memory: createMemoryTool({
             memoryStore,
           }),
-          wait: createWaitTool(),
+          wait: createWaitTool({
+            computerProvider,
+          }),
         };
 
         // biome-ignore lint/suspicious/noExplicitAny: user defined
