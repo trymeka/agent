@@ -6,15 +6,15 @@ It is designed as a simple, extensible, and customizable framework, allowing fle
 
 ## Benchmarks
 
-The agent primarily focuses on web browsing today, and achieved state-of-the-art benchmark results in the WebArena (70.5%).
+The agent primarily focuses on web browsing today, and achieves state-of-the-art benchmark results in the WebArena Benchmark (72.7%).
+
+<img width="1804" height="1282" alt="Frame 70 (2)" src="https://github.com/user-attachments/assets/45ba645c-7bb3-458d-af8a-9cb6cf689510" />
 
 Read more about the details of the benchmark results here.
 
-## Demo
+## Meka App
 
-Visit [trymeka/demo](https://github.com/trymeka/demo) for a functional demo.
-
-<img width="863" height="707" alt="Screenshot 2025-07-22 at 10 22 14 PM" src="https://github.com/user-attachments/assets/0b5df858-82da-4b6e-b153-542f00456455" />
+If you would like to get started with browser automations without any setup, visit the [Meka App](https://withmeka.com) to try the Meka Agent with $10 in free credits.
 
 ## Getting Started
 
@@ -86,13 +86,16 @@ Meka is created from lessons learned from experimentation and publicly available
 - **Vision-first Approach**: Captures complex websites more effectively than approaches that use DOM-based navigation or identification.
 - **VM Controls Over Browser Layer**: Provides better handling of system-level elements and alerts.
 - **Effective Memory Management**:
-  - Avoid passing excessive context to maintain agent performance. Providing 5-7 past steps in each iteration of the loop was the sweet spot for us.
-  - Track crucial memory separately for accumulating essential results.
+  - Short term memory: Avoid passing excessive context to maintain agent performance. Providing 5-7 past steps in each iteration of the loop was the sweet spot for us.
+  - Long term memory: Track crucial memory separately for accumulating essential results.
 - **Vision Model Selection**:
   - Vision models with strong visual grounding work effectively on their own.
   - Vision models without strong grounding benefit from additional tools (e.g., Omniparser) or a layered manager-executor model. This was tested but not implemented in this repo due to speed and cost concerns.
 - **LLM as a Judge**: Employ LLM evaluation during iterations inspired by [Reflexion](https://arxiv.org/pdf/2303.11366) and [related research](https://arxiv.org/abs/2404.06474).
 - **Stepwise Planning**: Consistent planning after each step significantly boosts performance ([source](https://arxiv.org/abs/2506.06698)).
+- **Mixture of Models**: Use two Ground Models that take turns generating responses. The output from one model serves as part of the input for the next, creating an iterative refinement process.
+
+For more details, visit our blog post on the Meka Agent.
 
 ## Key Features
 
