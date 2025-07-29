@@ -14,7 +14,7 @@ The agent primarily focuses on web browsing today, and achieves state-of-the-art
 
 ## Meka App
 
-If you would like to get started with browser automations without any setup, visit the [Meka App](https://withmeka.com) to try the Meka Agent with $10 in free credits.
+If you would like to get started with browser automations without any setup, visit the [Meka App](https://app.withmeka.com) to try the Meka Agent with $10 in free credits.
 
 ## Getting Started
 
