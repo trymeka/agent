@@ -1,5 +1,11 @@
 # @trymeka/core
 
+## 0.0.19
+
+### Patch Changes
+
+- c9a21ab: chore(core): update system prompt to include today's date
+
 ## 0.0.18
 
 ### Patch Changes
