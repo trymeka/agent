@@ -59,6 +59,17 @@ function toVercelTools<T extends z.ZodSchema>(
   return vercelTools;
 }
 
+/**
+ * Creates an AI provider that uses the Vercel AI SDK to interact with language models.
+ * This provider is responsible for generating text and structured objects,
+ * and includes logic for repairing tool calls if they fail.
+ *
+ * @param options - The configuration options for the Vercel AI provider.
+ * @param options.model - The language model to be used for generating responses.
+ * @param options.logger - An optional logger for logging internal events.
+ * @param vercelOptions - Additional options to be passed to the Vercel AI SDK's underlying function.
+ * @returns An `AIProvider` instance configured with the specified options.
+ */
 export function createVercelAIProvider({
   model,
   logger,

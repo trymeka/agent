@@ -21,6 +21,19 @@ const completeTaskSchema = z.object({
     ),
 });
 
+/**
+ * Creates a tool that allows the agent to declare a task as complete.
+ * This tool is essential for signaling the end of a task and for providing a final summary,
+ * evidence of completion, and a description of the final state. It also includes a mechanism
+ * for self-correction, where an evaluator can review the completion and provide feedback if necessary.
+ *
+ * @param options - The options for creating the complete task tool.
+ * @param options.ground - The primary AI provider for generating the final output.
+ * @param options.evaluator - An optional AI provider for evaluating the task completion.
+ * @param options.outputSchema - The Zod schema for the final output of the task.
+ * @param options.currentInstruction - The original instruction for the task.
+ * @returns A tool that can be used by the agent to complete a task.
+ */
 export function createCompleteTaskTool<T extends z.ZodSchema>({
   ground,
   evaluator,

@@ -82,6 +82,19 @@ const createAnchorClient =
     return response;
   };
 
+/**
+ * Creates a computer provider that interacts with Anchor Browser.
+ * This provider is responsible for managing browser sessions, handling user actions
+ * like clicking, typing, and navigating, and providing screenshots of the browser state.
+ *
+ * @param options - The configuration options for the Anchor Browser computer provider.
+ * @param options.apiKey - The API key for accessing the Anchor Browser service.
+ * @param options.uploadScreenshot - An optional function to upload screenshots after each step. If not provided, screenshots will be kept in base64 format.
+ * @param options.screenSize - Override for the screen size of the browser window. Defaults to 1366x768.
+ * @param options.initialUrl - The initial URL to navigate to when a session starts.
+ * @param options.logger - An optional logger for logging internal events.
+ * @returns A `ComputerProvider` instance configured for Anchor Browser.
+ */
 export function createAnchorBrowserComputerProvider(options: {
   apiKey: string;
   uploadScreenshot?: (options: {
@@ -165,11 +178,16 @@ export function createAnchorBrowserComputerProvider(options: {
   } & Record<string, any>
 > {
   const logger = options.logger ?? createNoOpLogger();
-  const screenSize = options.screenSize ?? {
-    width: DEFAULT_SCREEN_SIZE.width,
-    // For some reason, anchor browser add 90px to the overall height of the browser.
-    height: DEFAULT_SCREEN_SIZE.height - 90,
-  };
+  const screenSize = options.screenSize
+    ? {
+        width: options.screenSize.width,
+        height: options.screenSize.height - 90,
+      }
+    : {
+        width: DEFAULT_SCREEN_SIZE.width,
+        // For some reason, anchor browser add 90px to the overall height of the browser.
+        height: DEFAULT_SCREEN_SIZE.height - 90,
+      };
   const sessionMap = new Map<
     string,
     {

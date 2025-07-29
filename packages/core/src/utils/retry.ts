@@ -1,5 +1,20 @@
 import type { Logger } from "./logger";
 
+/**
+ * @internal
+ *
+ * Retries a function with exponential backoff.
+ * This is useful for handling transient errors that may resolve on their own after a short period of time.
+ *
+ * @template T The return type of the function to retry.
+ * @param options The options for the retry logic.
+ * @param options.fn The function to retry.
+ * @param options.maxRetries The maximum number of retries.
+ * @param options.initialDelay The initial delay between retries, in milliseconds.
+ * @param options.shouldRetryError A function that determines whether an error should be retried.
+ * @param options.logger An optional logger to log retry attempts.
+ * @returns A promise that resolves with the result of the function if it succeeds, or rejects with the last error if all retries fail.
+ */
 export async function retryWithExponentialBackoff<T>({
   fn,
   maxRetries = 3,

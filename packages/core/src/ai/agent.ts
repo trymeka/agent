@@ -43,12 +43,10 @@ const sessionIdGenerator = () => `session_${crypto.randomUUID()}`;
  * @param {AIProvider | { ground: AIProvider; alternateGround?: AIProvider; evaluator?: AIProvider; }} options.aiProvider - The AI provider to use for the agent.
  * @param {ComputerProvider} options.computerProvider - The computer provider to use for the agent.
  * @param {Logger | undefined} [options.logger] - The logger to use for the agent.
- * @param {number} [options.maxSteps] - The maximum number of steps to take for a task.
- * @param {number} [options.conversationLookBack] - The number of steps to look back for the conversation history.
  *
  * @returns A session manager that can be used to start tasks.
  */
-export function createAgent<T>(options: {
+export function createAgent<T, R>(options: {
   aiProvider:
     | AIProvider
     | {
@@ -56,7 +54,7 @@ export function createAgent<T>(options: {
         alternateGround?: AIProvider;
         evaluator?: AIProvider;
       };
-  computerProvider: ComputerProvider<T>;
+  computerProvider: ComputerProvider<T, R>;
   logger?: Logger;
 }) {
   const { aiProvider, computerProvider, logger: loggerOverride } = options;
@@ -78,6 +76,10 @@ export function createAgent<T>(options: {
   function createSession(sessionId: string) {
     return {
       id: sessionId,
+      /**
+       * Ends the current session. This will stop the computer provider and mark the session as "stopped".
+       * @throws {AgentError} If the session is not found.
+       */
       end: async () => {
         const currentSession = sessionMap.get(sessionId);
         if (!currentSession) {
@@ -91,6 +93,12 @@ export function createAgent<T>(options: {
         });
         await computerProvider.stop(sessionId);
       },
+      /**
+       * Retrieves a task by its ID.
+       * @param taskId The ID of the task to retrieve.
+       * @throws {AgentError} If the session is not found.
+       * @returns The task object if found, otherwise undefined.
+       */
       getTask: (taskId: string) => {
         const currentSession = sessionMap.get(sessionId);
         if (!currentSession) {
@@ -98,13 +106,49 @@ export function createAgent<T>(options: {
         }
         return currentSession.tasks.find((task) => task.id === taskId);
       },
+      /**
+       * Retrieves the current session object.
+       * @throws {AgentError} If the session is not found.
+       * @returns The current session object.
+       */
       get: () => {
         const currentSession = sessionMap.get(sessionId);
         if (!currentSession) {
-          return undefined;
+          throw new AgentError(`Session not found for sessionId: ${sessionId}`);
         }
         return currentSession;
       },
+      /**
+       * @example
+       * ```ts
+       * const task = await session.runTask({
+       *   instructions: "Summarize the top 3 articles",
+       *   outputSchema: z.object({
+       *     articles: z.array(z.object({
+       *       title: z.string(),
+       *       url: z.string(),
+       *       summary: z.string(),
+       *     })),
+       *   }),
+       *   initialUrl: "https://news.ycombinator.com",
+       * });
+       * console.log(task);
+       * ```
+       * Runs a task and returns the result.
+       * @param {Object} task - The task to run.
+       * @param {string} task.instructions - The instructions for the task.
+       * @param {string} [task.initialUrl] - The initial URL to navigate to. If not provided, the session's initial URL will be used.
+       * @param {z.ZodSchema} [task.outputSchema] - The schema for the output of the task.
+       * @param {Record<string, Tool<z.ZodSchema, any>>} [task.customTools] - Object mapping tool name to custom tools to use for the task.
+       * @param {number} [task.maxSteps] - The maximum number of steps to take for the task.
+       * @param {Function} [task.onStepComplete] - A function to call when a step is complete.
+       * @param {Function} [task.onTaskComplete] - A function to call when the task is complete.
+       * @throws {AgentError} If the session is not found or the agent has reached the maximum number of steps.
+       * @throws {ComputerProviderError} If the computer provider fails to navigate to the initial URL or take a screenshot.
+       * @throws {AIProviderError} If the AI provider fails to provide a response.
+       * @throws {ToolCallError} If a tool call fails.
+       * @returns {Promise<Task<z.infer<T>>>} The result of the task.
+       */
       runTask: async <T extends z.ZodSchema>(task: {
         instructions: string;
         initialUrl?: string;
@@ -493,6 +537,12 @@ export function createAgent<T>(options: {
   }
 
   const sessionManager = {
+    /**
+     * Retrieves an existing session.
+     * @param sessionId The ID of the session to retrieve.
+     * @returns A session object.
+     * @throws {AgentError} If the session is not found.
+     */
     getSession: (sessionId: string) => {
       const currentSession = sessionMap.get(sessionId);
       if (!currentSession) {
@@ -500,8 +550,18 @@ export function createAgent<T>(options: {
       }
       return createSession(sessionId);
     },
-    initializeSession: async (sessionIdOverride?: string) => {
-      const sessionId = sessionIdOverride ?? sessionIdGenerator();
+    /**
+     * Initializes a new agent session.
+     * @param args.sessionIdOverride An optional string to override the generated session ID.
+     * @param args.computerProviderOptions An optional object to pass computer provider specific options when starting the session.
+     * @returns A new session object.
+     * @throws {ComputerProviderError} If the computer provider fails to start.
+     */
+    initializeSession: async (args?: {
+      sessionIdOverride?: string;
+      computerProviderOptions?: Parameters<typeof computerProvider.start>[1];
+    }) => {
+      const sessionId = args?.sessionIdOverride ?? sessionIdGenerator();
       sessionMap.set(sessionId, {
         id: sessionId,
         liveUrl: undefined,
@@ -510,7 +570,7 @@ export function createAgent<T>(options: {
         status: "queued",
       });
       const { liveUrl, computerProviderId } = await computerProvider
-        .start(sessionId)
+        .start(sessionId, args?.computerProviderOptions)
         .catch((error) => {
           logger.error("[Agent] Failed to start computer provider", {
             error: error.message,

@@ -16,6 +16,19 @@ const shouldRetryE2B = (_: unknown): boolean => {
   return false;
 };
 
+/**
+ * Creates a computer provider that interacts with E2B.
+ * This provider is responsible for managing sandboxed desktop environments,
+ * handling user actions, and providing screenshots of the virtual desktop.
+ *
+ * @param options - The configuration options for the E2B computer provider.
+ * @param options.apiKey - The API key for accessing E2B.
+ * @param options.uploadScreenshot - An optional function to upload screenshots after each step. If not provided, screenshots will be kept in base64 format.
+ * @param options.screenSize - Override for the screen size of the virtual desktop. Defaults to 1000x768.
+ * @param options.initialUrl - The initial URL to navigate to when the browser starts.
+ * @param options.logger - An optional logger for logging internal events.
+ * @returns A `ComputerProvider` instance configured for E2B.
+ */
 export function createE2BComputerProvider(options: {
   apiKey: string;
   uploadScreenshot?: (options: {

@@ -1,3 +1,12 @@
+/**
+ * Generates a detailed system prompt for the AI agent, outlining its capabilities,
+ * core principles, and the tools it can use. This prompt is crucial for guiding
+ * the agent's behavior and ensuring it follows instructions effectively.
+ *
+ * @param options - An object containing the screen size.
+ * @param options.screenSize - The dimensions of the screen that the agent will be interacting with.
+ * @returns A string containing the system prompt.
+ */
 export const SYSTEM_PROMPT = ({
   screenSize,
 }: {

@@ -1,15 +1,25 @@
 import type { z } from "zod";
 import type { Tool } from "../tools";
 
+/**
+ * Represents a piece of text content in a message.
+ */
 export interface TextContent {
   type: "text";
   text: string;
 }
+
+/**
+ * Represents an image in a message, which can be a base64 string or a URL.
+ */
 export interface ImageContent {
   type: "image";
   image: string | URL;
 }
 
+/**
+ * Structure of a tool call.
+ */
 export interface ToolCall {
   toolCallId: string;
   toolName: string;
@@ -17,27 +27,39 @@ export interface ToolCall {
 }
 
 /**
- * Defines the structured messages used for conversations.
+ * Defines a message from the user, which can include text and images.
  */
 export interface UserMessage {
   role: "user";
   content: (TextContent | ImageContent)[];
 }
 
+/**
+ * Defines a message from the assistant, which can include text and tool calls.
+ */
 export interface AssistantMessage {
   role: "assistant";
   content: TextContent[];
   toolCalls?: ToolCall[];
 }
 
+/**
+ * Represents a message in the agent's conversation, which can be from either the user or the assistant.
+ */
 export type AgentMessage = UserMessage | AssistantMessage;
 
+/**
+ * Stores the planning data for an agent's step, including reasoning and goals.
+ */
 export interface PlanningData {
   previousStepEvaluation?: string;
   currentStepReasoning: string;
   nextStepGoal?: string;
 }
 
+/**
+ * Represents a log of an agent's step, including screenshots, model output, and usage statistics.
+ */
 export interface AgentLog {
   screenshot: string;
   step: number;
@@ -79,8 +101,7 @@ export interface AgentLog {
 }
 
 /**
- * A task is a single unit of work that the agent is working on.
- * It is used to track the state of the task and the logs that are generated.
+ * A task is a single instruction that the agent is working on.
  */
 export interface Task<T = unknown> {
   id: string;
@@ -91,8 +112,8 @@ export interface Task<T = unknown> {
 }
 
 /**
- * A session is a collection of tasks that are related to each other.
- * It is used to track the state of the agent and the tasks that it is working on.
+ * A session is a collection of tasks that were executed by the agent.
+ * It is used to track the state of the agent and the tasks that it has executed/is working on.
  */
 export interface Session {
   id: string;

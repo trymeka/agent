@@ -1,6 +1,13 @@
 import { ComputerProviderError } from "@trymeka/core";
 import type { Browser, Page } from "playwright-core";
 
+/**
+ * @internal
+ * Gets the current page from a browser. This is used to get the current page from a browser.
+ * @param browser The browser to get the page from.
+ * @param providerName The name of the computer provider. Used for error messages.
+ * @returns The current page.
+ */
 export function getPage(browser: Browser, providerName: string): Page {
   const contexts = browser.contexts();
   if (contexts.length === 0) {
@@ -31,6 +38,14 @@ export function getPage(browser: Browser, providerName: string): Page {
   throw new Error(`No default page found in any context for ${providerName}.`);
 }
 
+/**
+ * @internal
+ * Gets the instance from the session map. This is used to get the instance from the session map.
+ * @param sessionId The ID of the session.
+ * @param sessionMap The session map.
+ * @throws {ComputerProviderError} If the instance is not found.
+ * @returns The instance.
+ */
 export function getInstance<T>(sessionId: string, sessionMap: Map<string, T>) {
   const result = sessionMap.get(sessionId);
   if (!result) {

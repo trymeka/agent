@@ -1,3 +1,8 @@
+/**
+ * Represents an error that occurs during the execution of a tool.
+ * This error is thrown when a tool fails to execute properly, and it includes
+ * information about the tool that was called and the arguments it received.
+ */
 export class ToolCallError extends Error {
   public readonly toolName: string;
   public readonly toolArgs: unknown;
@@ -13,6 +18,12 @@ export class ToolCallError extends Error {
   }
 }
 
+/**
+ * Represents an error that occurs within a computer provider.
+ * This error is thrown when there is an issue with the underlying service that
+ * provides the computer interaction capabilities, such as a failure to start a
+ * session or take a screenshot.
+ */
 export class ComputerProviderError extends Error {
   constructor(message: string, options?: { cause?: unknown }) {
     super(
