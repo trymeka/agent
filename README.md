@@ -6,15 +6,15 @@ It is designed as a simple, extensible, and customizable framework, allowing fle
 
 ## Benchmarks
 
-The agent primarily focuses on web browsing today, and achieved state-of-the-art benchmark results in the WebArena (70.5%).
+The agent primarily focuses on web browsing today, and achieves state-of-the-art benchmark results in the WebArena Benchmark (72.7%).
+
+<img width="1804" height="1282" alt="Frame 70 (2)" src="https://github.com/user-attachments/assets/45ba645c-7bb3-458d-af8a-9cb6cf689510" />
 
 Read more about the details of the benchmark results here.
 
-## Demo
+## Meka App
 
-Visit [trymeka/demo](https://github.com/trymeka/demo) for a functional demo.
-
-<img width="863" height="707" alt="Screenshot 2025-07-22 at 10 22 14 PM" src="https://github.com/user-attachments/assets/0b5df858-82da-4b6e-b153-542f00456455" />
+If you would like to get started with browser automations without any setup, visit the [Meka App](https://withmeka.com) to try the Meka Agent with $10 in free credits.
 
 ## Getting Started
 
