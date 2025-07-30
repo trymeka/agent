@@ -119,7 +119,7 @@ For more details, [visit our blog post](https://blog.withmeka.com/introducing-me
 
 - **Bring your own LLM**: Meka is inherently hackable and works with any Model that Vercel's ai-sdk supports. It is important that the model is a vision model that has good visual grounding. In our experiments, OpenAI o3, Sonnet 4, and Opus 4 are good candidates.
 - **Extensible**: Meka is designed to be extensible. You can easily add your own tools and providers to the agent.
-- **Open Source**: Meka is oepn and builds on learnings that we've developed over testing ai agents on autonomous task.
+- **Open Source**: Meka is open source and builds on learnings that we've developed over testing ai agents on autonomous task completion.
 - **Typesafe**: Meka is written in TypeScript and provides a typesafe API for building and interacting with agents.
 
 ## Contributing
