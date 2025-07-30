@@ -41,25 +41,32 @@ ANCHOR_BROWSER_API_KEY=GET FROM https://app.anchorbrowser.io/api-access
 3. Start the agent
 
 ```typescript
+import { createOpenAI } from "@ai-sdk/openai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { createVercelAIProvider } from "@trymeka/ai-provider-vercel";
+import { createAnchorBrowserComputerProvider } from "@trymeka/computer-provider-anchor-browser";
+import { createAgent } from "@trymeka/core/ai/agent";
+
 const o3AIProvider = createVercelAIProvider({
   model: createOpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   })("o3"),
-  logger,
+  logger: console,
 });
 
 const claudeAIProvider = createVercelAIProvider({
   model: createAnthropic({
     apiKey: process.env.ANTHROPIC_API_KEY,
   })("claude-4-sonnet-20250514"),
-  logger,
+  logger: console,
 });
 
 const geminiFlashAIProvider = createVercelAIProvider({
   model: createGoogleGenerativeAI({
     apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
   })("gemini-2.5-flash"),
-  logger,
+  logger: console,
 });
 
 const computerProvider = createAnchorBrowserComputerProvider({
