@@ -1,5 +1,11 @@
 # @trymeka/core
 
+## 0.0.22
+
+### Patch Changes
+
+- 348f1fc: Update system prompt to emphasize using up to date information
+
 ## 0.0.21
 
 ### Patch Changes
