@@ -43,7 +43,7 @@ export {
   type MemoryStore,
 } from "./memory";
 export {
-  createTaskListTool,
+  createToDoListTool,
   SessionToDoListStore,
   type ToDoListStore,
   type ToDo,

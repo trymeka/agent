@@ -4,7 +4,7 @@ import {
   SessionToDoListStore,
   type Tool,
   createCompleteTaskTool,
-  createTaskListTool,
+  createToDoListTool,
   createWaitTool,
 } from "../tools";
 import { type ComputerProvider, createComputerTool } from "../tools/computer";
@@ -206,7 +206,7 @@ export function createAgent<T, R>(options: {
           wait: createWaitTool({
             computerProvider,
           }),
-          task_list: createTaskListTool({
+          todo_list: createToDoListTool({
             toDoListStore: todoListStore,
           }),
         };

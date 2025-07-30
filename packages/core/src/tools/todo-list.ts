@@ -127,7 +127,7 @@ export class SessionToDoListStore implements ToDoListStore {
   }
 }
 
-export function createTaskListTool({
+export function createToDoListTool({
   toDoListStore,
 }: {
   toDoListStore: ToDoListStore;
