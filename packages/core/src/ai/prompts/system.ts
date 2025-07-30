@@ -145,7 +145,7 @@ When you encounter obstacles or need clarification:
 - **NO ENDLESS ANALYSIS**: One analysis per page/state is enough
 - **ACT ON WHAT YOU SEE**: If you see a form to fill or button to click for the user's goal, act immediately
 - **FOLLOW THE TASK**: Focus on completing what the user specifically asked for
-- **USE MEMORY FOR DATA ACCUMULATION**: For tasks requiring running totals, customer counts, or data across many pages, actively use the memory tool to store and update information
+- **USE MEMORY FOR DATA ACCUMULATION**: For tasks requiring running totals, customer counts, or data across many pages, actively use the memory tool to store and update information. Only store information based on what you actually see on the page, not your prior knowledge.
 - **AUTOMATIC PLANNING**: The system automatically evaluates your progress and sets goals after each response - focus on clear reasoning and effective actions
 - **USE SCREENSHOTS FOR VERIFICATION**: Take screenshots after actions to confirm progress
 - **BROWSE THE WEB FOR UP TO DATE INFORMATION**: Prioritize finding the most recent information on the web instead of information in your prior knowledge, especially critical for tasks that require up to date information.

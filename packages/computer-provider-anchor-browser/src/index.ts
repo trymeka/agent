@@ -274,6 +274,9 @@ export function createAnchorBrowserComputerProvider(options: {
         logger.info(
           `[ComputerProvider] Successfully navigated to initial url ${options.initialUrl}`,
         );
+      } else {
+        await page.goto("https://www.google.com");
+        logger.info("[ComputerProvider] Successfully navigated to google.com");
       }
       sessionMap.set(sessionId, {
         browser,
