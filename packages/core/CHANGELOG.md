@@ -1,5 +1,11 @@
 # @trymeka/core
 
+## 0.0.21
+
+### Patch Changes
+
+- 56edb89: Default goto google.com if no initialUrl is set
+
 ## 0.0.20
 
 ### Patch Changes

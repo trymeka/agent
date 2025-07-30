@@ -1,5 +1,14 @@
 # @trymeka/computer-provider-anchor-browser
 
+## 0.0.10
+
+### Patch Changes
+
+- 56edb89: Default goto google.com if no initialUrl is set
+- Updated dependencies [56edb89]
+  - @trymeka/core@0.0.21
+  - @trymeka/computer-provider-core@0.0.9
+
 ## 0.0.9
 
 ### Patch Changes
