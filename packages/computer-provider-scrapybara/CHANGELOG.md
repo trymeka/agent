@@ -1,5 +1,13 @@
 # @trymeka/computer-provider-scrapybara
 
+## 0.0.22
+
+### Patch Changes
+
+- Updated dependencies [56edb89]
+  - @trymeka/core@0.0.21
+  - @trymeka/computer-provider-core@0.0.9
+
 ## 0.0.21
 
 ### Patch Changes
