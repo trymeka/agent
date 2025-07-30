@@ -1,5 +1,11 @@
 # @trymeka/core
 
+## 0.0.20
+
+### Patch Changes
+
+- 7497b1d: Update system prompt to have agent better consider elements in focus and not deprioritize its own reasoning for information
+
 ## 0.0.19
 
 ### Patch Changes
