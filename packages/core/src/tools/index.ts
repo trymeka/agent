@@ -42,4 +42,10 @@ export {
   createMemoryTool,
   type MemoryStore,
 } from "./memory";
+export {
+  createTaskListTool,
+  SessionToDoListStore,
+  type ToDoListStore,
+  type ToDo,
+} from "./todo-list";
 export { ToolCallError, ComputerProviderError } from "./errors";

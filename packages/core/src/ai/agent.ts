@@ -1,6 +1,12 @@
 import { z } from "zod";
 import type { AIProvider, AgentLog, AgentMessage, Session, Task } from ".";
-import { type Tool, createCompleteTaskTool, createWaitTool } from "../tools";
+import {
+  SessionToDoListStore,
+  type Tool,
+  createCompleteTaskTool,
+  createTaskListTool,
+  createWaitTool,
+} from "../tools";
 import { type ComputerProvider, createComputerTool } from "../tools/computer";
 import { ComputerProviderError, ToolCallError } from "../tools/errors";
 import { SessionMemoryStore, createMemoryTool } from "../tools/memory";
@@ -174,6 +180,7 @@ export function createAgent<T, R>(options: {
 
         // Create persistent memory store for this task
         const memoryStore = new SessionMemoryStore();
+        const todoListStore = new SessionToDoListStore();
 
         const coreTools = {
           computer_action: createComputerTool({
@@ -198,6 +205,9 @@ export function createAgent<T, R>(options: {
           }),
           wait: createWaitTool({
             computerProvider,
+          }),
+          task_list: createTaskListTool({
+            toDoListStore: todoListStore,
           }),
         };
 
@@ -252,6 +262,20 @@ export function createAgent<T, R>(options: {
                 {
                   type: "text",
                   text: memoryContext,
+                },
+              ],
+            });
+          }
+
+          const taskListContext = todoListStore.getTaskListContext();
+          if (taskListContext) {
+            // Add task list context as the first user message so it's always visible
+            messages.unshift({
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: taskListContext,
                 },
               ],
             });

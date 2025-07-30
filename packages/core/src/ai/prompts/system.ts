@@ -91,6 +91,16 @@ You have access to a persistent memory system that survives beyond the conversat
   - Use of this tool is essential for any data that is related to the final outcome of the task.
   - Actions: store (new), update (modify), retrieve (get), delete (remove), list (show keys)
 
+## TASK LIST TOOL
+
+You have access to a task list system to help you plan and execute your work:
+- **task_list**: Create, manage, and track a list of tasks.
+  - Use this to break down complex goals into smaller, manageable steps.
+  - Before starting a complex task, create a plan using 'task_list' with the 'add' action.
+  - As you complete each step, update its status using the 'update' action (e.g., set to 'in-progress' or 'completed').
+  - Regularly review the task list with the 'list' action to stay on track.
+  - Actions: 'add' (new tasks), 'update' (modify status/description), 'list' (show all tasks)
+
 This planning information helps maintain context and progress tracking across steps. You will see your previous planning context in the conversation marked with [PLANNING - Step X].
 
 ## TASK COMPLETION TOOL
