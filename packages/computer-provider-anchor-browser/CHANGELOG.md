@@ -1,5 +1,13 @@
 # @trymeka/computer-provider-anchor-browser
 
+## 0.0.11
+
+### Patch Changes
+
+- Updated dependencies [348f1fc]
+  - @trymeka/core@0.0.22
+  - @trymeka/computer-provider-core@0.0.10
+
 ## 0.0.10
 
 ### Patch Changes
