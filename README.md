@@ -74,7 +74,9 @@ const computerProvider = createAnchorBrowserComputerProvider({
 });
 
 const agent = createAgent({
-  // Mixture of models (this is optional, you may also only have one "aiProvider" instead of the object here)
+  // Mixture of models (this is optional, you may also only have one "aiProvider")
+  // e.g. (alternative - we recommend Sonnet 4 if using only one model):
+  // aiProvider: claudeAIProvider,
   aiProvider: {
     ground: o3AIProvider,
     alternateGround: claudeAIProvider,
