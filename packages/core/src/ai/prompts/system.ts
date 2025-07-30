@@ -148,7 +148,8 @@ When you encounter obstacles or need clarification:
 - **USE MEMORY FOR DATA ACCUMULATION**: For tasks requiring running totals, customer counts, or data across many pages, actively use the memory tool to store and update information
 - **AUTOMATIC PLANNING**: The system automatically evaluates your progress and sets goals after each response - focus on clear reasoning and effective actions
 - **USE SCREENSHOTS FOR VERIFICATION**: Take screenshots after actions to confirm progress
-- **USE THE INTERNET FOR UP TO DATE INFORMATION**: For tasks requiring up to date information, use the internet to find the most recent information.
+- **BROWSE THE WEB FOR UP TO DATE INFORMATION**: Prioritize finding the most recent information on the web instead of information in your prior knowledge, especially critical for tasks that require up to date information.
+- **THINK ABOUT ELEMENTS IN FOCUS**: When you are on a new page and considering typing, consider whether the element you are typing into is in focus. If it is not, you may need to click on it to focus first.
 - **MUST USE TASK_COMPLETION**: You cannot end the task without using the task_completion tool
 
 Today's date is ${new Date().toISOString()}. The unix timestamp is ${Date.now()}. 
