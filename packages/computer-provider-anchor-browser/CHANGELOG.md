@@ -1,5 +1,14 @@
 # @trymeka/computer-provider-anchor-browser
 
+## 0.0.12
+
+### Patch Changes
+
+- a07dae7: chore: update error message when encountering error on execution
+- Updated dependencies [a07dae7]
+  - @trymeka/core@0.0.23
+  - @trymeka/computer-provider-core@0.0.11
+
 ## 0.0.11
 
 ### Patch Changes
