@@ -76,7 +76,10 @@ const createAnchorClient =
         error: { code: number; message: string };
       };
       throw new ComputerProviderError(
-        `Failed to perform ${method} ${path}: ${error.error.code} ${JSON.stringify(error)}`,
+        `Failed to perform ${method} ${path}: ${error.error.code} ${error.error.message}`,
+        {
+          extraArgs: error,
+        },
       );
     }
     return response;
