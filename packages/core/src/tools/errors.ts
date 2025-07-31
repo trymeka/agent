@@ -25,7 +25,12 @@ export class ToolCallError extends Error {
  * session or take a screenshot.
  */
 export class ComputerProviderError extends Error {
-  constructor(message: string, options?: { cause?: unknown }) {
+  public readonly extraArgs: Record<string, unknown> | undefined;
+
+  constructor(
+    message: string,
+    options?: { cause?: unknown; extraArgs?: Record<string, unknown> },
+  ) {
     super(
       `ComputerProviderError: ${message}. ${
         options?.cause instanceof Error
@@ -35,6 +40,7 @@ export class ComputerProviderError extends Error {
       options,
     );
     this.name = "ComputerProviderError";
+    this.extraArgs = options?.extraArgs;
     if (options?.cause instanceof Error) {
       Error.captureStackTrace(options.cause);
     }
