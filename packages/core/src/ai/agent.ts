@@ -5,6 +5,7 @@ import { type ComputerProvider, createComputerTool } from "../tools/computer";
 import { ComputerProviderError, ToolCallError } from "../tools/errors";
 import { SessionMemoryStore, createMemoryTool } from "../tools/memory";
 import { type Logger, createNoOpLogger } from "../utils/logger";
+import { processMessages } from "../utils/process-messages";
 import { AIProviderError, AgentError } from "./errors";
 import { SYSTEM_PROMPT } from "./prompts/system";
 
@@ -362,6 +363,7 @@ export function createAgent<T, R>(options: {
 
         while (step < MAX_STEPS) {
           const messages = getMessageInput(step);
+          const processedMessages = await processMessages(messages);
           logger.info(`[Agent]: Step ${step}`, {
             messages: messages.map((m) =>
               m.content.flatMap((c) => (c.type === "text" ? c.text : c.type)),
@@ -375,7 +377,7 @@ export function createAgent<T, R>(options: {
               systemPrompt: SYSTEM_PROMPT({
                 screenSize,
               }),
-              messages,
+              messages: processedMessages,
               tools: allTools,
             })
             .catch((error) => {

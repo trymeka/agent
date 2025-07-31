@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Tool } from ".";
 import type { AIProvider, UserMessage } from "../ai";
 import { createAgentLogUpdate } from "../utils/agent-log";
+import { processMessages } from "../utils/process-messages";
 
 const completeTaskSchema = z.object({
   completionSummary: z
@@ -95,6 +96,9 @@ Respond with either an APPROVED or REFLECTION object based on your evaluation. F
           } satisfies UserMessage,
         ];
 
+        const processedEvaluationMessages =
+          await processMessages(evaluationMessages);
+
         const evaluationResult = await evaluator.generateObject({
           schema: z.object({
             approved: z
@@ -113,7 +117,7 @@ Respond with either an APPROVED or REFLECTION object based on your evaluation. F
               })
               .nullable(),
           }),
-          messages: evaluationMessages,
+          messages: processedEvaluationMessages,
         });
 
         // If evaluation indicates issues, provide reflection
@@ -155,8 +159,9 @@ Respond with either an APPROVED or REFLECTION object based on your evaluation. F
           ],
         } satisfies UserMessage,
       ];
+      const processedFullHistory = await processMessages(fullHistory);
       const result = await ground.generateObject({
-        messages: fullHistory,
+        messages: processedFullHistory,
         schema: outputSchema,
       });
       return { type: "completion", output: result.object };
