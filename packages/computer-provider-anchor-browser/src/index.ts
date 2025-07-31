@@ -72,6 +72,9 @@ const createAnchorClient =
           body: method === "GET" ? null : JSON.stringify(body),
         }).then(async (res) => {
           if (res.status === 500) {
+            console.log(
+              `Response calling anchor browser ${anchorId}${path}: ${res.status}`,
+            );
             const error = await res.text();
             throw new ComputerProviderError(
               `Failed to perform ${method} ${path}: ${error} (500)`,
@@ -82,12 +85,12 @@ const createAnchorClient =
       shouldRetryError: (e) => {
         if (e instanceof ComputerProviderError) {
           // We retry on 500 errors
-          return e.message.includes("500");
+          return true;
         }
         // This happens when fetch fails for some reason due to no internet connection, etc.
         return true;
       },
-      logger: createNoOpLogger(),
+      logger: console,
     });
     if (!response.ok) {
       const error = (await response.json()) as {
