@@ -193,6 +193,7 @@ export function createAgent<T, R>(options: {
                   ),
               }),
             currentInstruction: task.instructions,
+            logger,
           }),
           memory: createMemoryTool({
             memoryStore,

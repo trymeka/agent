@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Tool } from ".";
 import type { AIProvider, UserMessage } from "../ai";
 import { createAgentLogUpdate } from "../utils/agent-log";
+import type { Logger } from "../utils/logger";
 import { processMessages } from "../utils/process-messages";
 
 const completeTaskSchema = z.object({
@@ -40,11 +41,13 @@ export function createCompleteTaskTool<T extends z.ZodSchema>({
   evaluator,
   outputSchema,
   currentInstruction,
+  logger,
 }: {
   ground: AIProvider;
   evaluator: AIProvider | undefined;
   outputSchema: T;
   currentInstruction: string;
+  logger?: Logger;
 }): Tool<typeof completeTaskSchema, z.infer<T>> {
   return {
     description:
@@ -98,7 +101,7 @@ Respond with either an APPROVED or REFLECTION object based on your evaluation. F
 
         const processedEvaluationMessages =
           await processMessages(evaluationMessages);
-
+        logger?.info("[CompleteTaskTool] Evaluating task completion");
         const evaluationResult = await evaluator.generateObject({
           schema: z.object({
             approved: z
@@ -118,6 +121,9 @@ Respond with either an APPROVED or REFLECTION object based on your evaluation. F
               .nullable(),
           }),
           messages: processedEvaluationMessages,
+        });
+        logger?.info("[CompleteTaskTool] Evaluation result", {
+          evaluationResult,
         });
 
         // If evaluation indicates issues, provide reflection
@@ -146,6 +152,7 @@ Respond with either an APPROVED or REFLECTION object based on your evaluation. F
         }
       }
 
+      logger?.info("[CompleteTaskTool] Generating final output");
       // Proceed with ground model to generate final output
       const fullHistory = [
         ...(context.messages ?? []),
@@ -163,6 +170,9 @@ Respond with either an APPROVED or REFLECTION object based on your evaluation. F
       const result = await ground.generateObject({
         messages: processedFullHistory,
         schema: outputSchema,
+      });
+      logger?.info("[CompleteTaskTool] Final output generated", {
+        result,
       });
       return { type: "completion", output: result.object };
     },
