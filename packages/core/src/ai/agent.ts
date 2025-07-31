@@ -365,11 +365,11 @@ export function createAgent<T, R>(options: {
           const messages = getMessageInput(step);
           const processedMessages = await processMessages(messages);
           logger.info(`[Agent]: Step ${step}`, {
-            messages: messages.map((m) =>
+            messages: processedMessages.map((m) =>
               m.content.flatMap((c) =>
                 c.type === "text"
                   ? c.text
-                  : `${c.type} ${c.image instanceof URL ? `: 'url'` : "raw"}`,
+                  : `${c.type} ${c.image instanceof URL ? "url" : "raw"}`,
               ),
             ),
           });
