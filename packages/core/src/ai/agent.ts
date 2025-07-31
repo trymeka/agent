@@ -366,7 +366,11 @@ export function createAgent<T, R>(options: {
           const processedMessages = await processMessages(messages);
           logger.info(`[Agent]: Step ${step}`, {
             messages: messages.map((m) =>
-              m.content.flatMap((c) => (c.type === "text" ? c.text : c.type)),
+              m.content.flatMap((c) =>
+                c.type === "text"
+                  ? c.text
+                  : `${c.type} ${c.image instanceof URL ? `: 'url'` : "raw"}`,
+              ),
             ),
           });
 

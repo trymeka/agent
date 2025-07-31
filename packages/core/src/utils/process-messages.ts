@@ -40,7 +40,6 @@ export async function processMessages(
             return contentItem;
           }
 
-          // download image and cache it
           const imageUrl = contentItem.image.href;
           let imageBase64 = imageCache.get(imageUrl);
 
