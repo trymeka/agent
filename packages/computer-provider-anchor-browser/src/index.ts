@@ -8,6 +8,7 @@ import {
   ComputerProviderError,
 } from "@trymeka/core";
 import { type Logger, createNoOpLogger } from "@trymeka/core/utils/logger";
+import { retryWithExponentialBackoff } from "@trymeka/core/utils/retry";
 import { type Browser, type Page, chromium } from "playwright-core";
 
 const CUA_KEY_TO_PLAYWRIGHT_KEY: Record<string, string> = {
@@ -60,26 +61,40 @@ const createAnchorClient =
     if (method !== "GET" && !body) {
       throw new ComputerProviderError(`Body is required for method ${method}`);
     }
-    const response = await fetch(
-      `https://api.anchorbrowser.io/v1/sessions/${anchorId}${path}`,
-      {
-        method,
-        headers: {
-          "anchor-api-key": apiKey,
-          "Content-Type": "application/json",
-        },
-        body: method === "GET" ? null : JSON.stringify(body),
+    const response = await retryWithExponentialBackoff({
+      fn: () =>
+        fetch(`https://api.anchorbrowser.io/v1/sessions/${anchorId}${path}`, {
+          method,
+          headers: {
+            "anchor-api-key": apiKey,
+            "Content-Type": "application/json",
+          },
+          body: method === "GET" ? null : JSON.stringify(body),
+        }).then(async (res) => {
+          if (res.status === 500) {
+            const error = await res.text();
+            throw new ComputerProviderError(
+              `Failed to perform ${method} ${path}: ${error} (500)`,
+            );
+          }
+          return res;
+        }),
+      shouldRetryError: (e) => {
+        if (e instanceof ComputerProviderError) {
+          // We retry on 500 errors
+          return e.message.includes("500");
+        }
+        // This happens when fetch fails for some reason due to no internet connection, etc.
+        return true;
       },
-    );
+      logger: createNoOpLogger(),
+    });
     if (!response.ok) {
       const error = (await response.json()) as {
         error: { code: number; message: string };
       };
       throw new ComputerProviderError(
-        `Failed to perform ${method} ${path}: ${error.error.code} ${error.error.message}`,
-        {
-          extraArgs: error,
-        },
+        `Failed to perform ${method} ${path}: ${error.error.code} ${JSON.stringify(error)}`,
       );
     }
     return response;
