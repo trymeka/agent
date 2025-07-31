@@ -1,5 +1,11 @@
 # @trymeka/core
 
+## 0.0.23
+
+### Patch Changes
+
+- a07dae7: feat: add lru cache to manually parse images before sending to AI providers to reduce download timeout errors on their end.
+
 ## 0.0.22
 
 ### Patch Changes

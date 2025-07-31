@@ -1,5 +1,13 @@
 # @trymeka/computer-provider-e2b
 
+## 0.0.8
+
+### Patch Changes
+
+- Updated dependencies [a07dae7]
+  - @trymeka/core@0.0.23
+  - @trymeka/computer-provider-core@0.0.11
+
 ## 0.0.7
 
 ### Patch Changes
