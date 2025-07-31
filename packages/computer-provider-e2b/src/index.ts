@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import type { Sandbox, SandboxOpts } from "@e2b/desktop";
+import { type Sandbox, SandboxError, type SandboxOpts } from "@e2b/desktop";
 import { getInstance } from "@trymeka/computer-provider-core";
 import { DEFAULT_SCREEN_SIZE } from "@trymeka/computer-provider-core/constants";
 import {
@@ -11,10 +11,44 @@ import {
 import { type Logger, createNoOpLogger } from "@trymeka/core/utils/logger";
 import { retryWithExponentialBackoff } from "@trymeka/core/utils/retry";
 
-const shouldRetryE2B = (_: unknown): boolean => {
-  // just throw everything for now
+const shouldRetryE2B = (e: unknown): boolean => {
+  // From https://github.com/e2b-dev/E2B/blob/main/packages/js-sdk/src/envd/rpc.ts#L8
+  // it seems like the sandbox error is for unhandled / non user errors
+  if (e instanceof SandboxError) {
+    return true;
+  }
+  // everything else is either timeout or user error
   return false;
 };
+
+/**
+ * Wraps a Sandbox instance with retry logic for all its methods.
+ * This is to make the interaction with E2B more robust against transient errors.
+ *
+ * @param sandbox The E2B Sandbox instance to wrap.
+ * @param logger An optional logger.
+ * @returns A proxied Sandbox instance.
+ */
+function wrapSandboxWithRetries(sandbox: Sandbox, logger?: Logger): Sandbox {
+  return new Proxy(sandbox, {
+    get(target, prop, receiver) {
+      const original = Reflect.get(target, prop, receiver);
+
+      if (typeof original === "function") {
+        return (...args: unknown[]) => {
+          const boundFn = original.bind(target);
+          return retryWithExponentialBackoff({
+            fn: () => boundFn(...args),
+            shouldRetryError: shouldRetryE2B,
+            logger: logger ?? createNoOpLogger(),
+          });
+        };
+      }
+
+      return original;
+    },
+  });
+}
 
 /**
  * Creates a computer provider that interacts with E2B.
@@ -86,7 +120,7 @@ export function createE2BComputerProvider(options: {
 
       const { Sandbox } = await import("@e2b/desktop");
 
-      const sandbox = await Sandbox.create({
+      const sandboxUnwrapped = await Sandbox.create({
         apiKey: options.apiKey,
         metadata: { sessionId },
         resolution: [screenSize.width, screenSize.height],
@@ -94,11 +128,14 @@ export function createE2BComputerProvider(options: {
         ...browserOptions,
       });
 
+      const sandbox = wrapSandboxWithRetries(sandboxUnwrapped, logger);
+
       logger.info("[ComputerProvider] E2B sandbox started", { sessionId });
 
       await sandbox.launch("google-chrome");
       await sandbox.wait(5_000); // Wait 5s for app to start
       logger.info("[ComputerProvider] Launched google chrome");
+      // needed to read the clipboard
       await sandbox.commands.run(
         "sudo apt-get update && sudo apt-get install -y xsel",
       );
@@ -140,10 +177,7 @@ export function createE2BComputerProvider(options: {
     async takeScreenshot(sessionId: string) {
       const { sandbox } = getInstance(sessionId, sessionMap);
 
-      const screenshot = await retryWithExponentialBackoff({
-        fn: () => sandbox.screenshot(),
-        shouldRetryError: shouldRetryE2B,
-      });
+      const screenshot = await sandbox.screenshot();
 
       const base64 = Buffer.from(screenshot).toString("base64");
       return base64;
@@ -154,140 +188,129 @@ export function createE2BComputerProvider(options: {
       context: { sessionId: string; step: number; reasoning?: string },
     ): Promise<ComputerActionResult> {
       const { sandbox } = getInstance(context.sessionId, sessionMap);
+      switch (action.type) {
+        case "click": {
+          const { x, y, button = "left" } = action;
 
-      return await retryWithExponentialBackoff({
-        fn: async () => {
-          switch (action.type) {
-            case "click": {
-              const { x, y, button = "left" } = action;
-
-              switch (button.toLowerCase()) {
-                case "left":
-                  await sandbox.leftClick(x, y);
-                  break;
-                case "right":
-                  await sandbox.rightClick(x, y);
-                  break;
-                case "middle":
-                case "wheel":
-                  await sandbox.middleClick(x, y);
-                  break;
-                default:
-                  throw new ComputerProviderError(
-                    `Unsupported button: ${button}`,
-                  );
-              }
-
-              return {
-                type: "click",
-                actionPerformed: `Clicked (button: ${button}) at position (${x}, ${y})`,
-                reasoning:
-                  context.reasoning ??
-                  `Clicked (button: ${button}) at position (${x}, ${y})`,
-                timestamp: new Date().toISOString(),
-              };
-            }
-            case "double_click": {
-              const { x, y } = action;
-              await sandbox.doubleClick(x, y);
-              return {
-                type: "double_click",
-                actionPerformed: `Double-clicked at position (${x}, ${y})`,
-                reasoning:
-                  context.reasoning ??
-                  `Double-clicked at position (${x}, ${y})`,
-                timestamp: new Date().toISOString(),
-              };
-            }
-            case "scroll": {
-              const { x, y, scroll_x: scrollX, scroll_y: scrollY } = action;
-
-              // arbitrary number of 100 pixels per notch
-              const scrollYNotches = Math.abs(Math.floor(scrollY / 100)) || 1;
-
-              // TODO: Figure out how to handle scrollX
-              await sandbox.moveMouse(x, y);
-              await sandbox.scroll(scrollY > 0 ? "down" : "up", scrollYNotches);
-              return {
-                type: "scroll",
-                actionPerformed: `Scrolled by (scrollX=${scrollX}, scrollY=${scrollY}) at mouse position (${x},${y})`,
-                reasoning:
-                  context.reasoning ??
-                  `Scrolled by (scrollX=${scrollX}, scrollY=${scrollY}) at mouse position (${x},${y})`,
-                timestamp: new Date().toISOString(),
-              };
-            }
-            case "keypress": {
-              const { keys } = action;
-              await sandbox.press(keys);
-
-              return {
-                type: "keypress",
-                actionPerformed: `Pressed keys: ${keys.join("+")}`,
-                reasoning:
-                  context.reasoning ?? `Pressed keys: ${keys.join("+")}`,
-                timestamp: new Date().toISOString(),
-              };
-            }
-            case "type": {
-              const { text } = action;
-              await sandbox.write(text);
-              return {
-                type: "type",
-                actionPerformed: `Typed text: ${text}`,
-                reasoning: context.reasoning ?? `Typed text: ${text}`,
-                timestamp: new Date().toISOString(),
-              };
-            }
-
-            case "drag": {
-              const { path } = action;
-              if (path.length < 2) {
-                throw new ComputerProviderError(
-                  "Drag path invalid for computer action.",
-                );
-              }
-
-              const firstPoint = path[0];
-              const lastPoint = path[path.length - 1];
-              if (!firstPoint || !lastPoint) {
-                throw new ComputerProviderError(
-                  "Bad drag path: Drag path invalid for computer action.",
-                );
-              }
-
-              await sandbox.drag(
-                [firstPoint.x, firstPoint.y],
-                [lastPoint.x, lastPoint.y],
-              );
-              return {
-                type: "drag",
-                actionPerformed: `Dragged mouse from (${firstPoint.x},${firstPoint.y}) to (${lastPoint.x},${lastPoint.y})`,
-                reasoning:
-                  context.reasoning ??
-                  `Dragged mouse from (${firstPoint.x},${firstPoint.y}) to (${lastPoint.x},${lastPoint.y})`,
-                timestamp: new Date().toISOString(),
-              };
-            }
-            case "move": {
-              const { x, y } = action;
-              await sandbox.moveMouse(x, y);
-              return {
-                type: "move",
-                actionPerformed: `Moved mouse to (${x}, ${y})`,
-                reasoning: context.reasoning ?? `Moved mouse to (${x}, ${y})`,
-                timestamp: new Date().toISOString(),
-              };
-            }
-            default: {
-              const _never: never = action;
-              throw new Error("Unsupported action type.");
-            }
+          switch (button.toLowerCase()) {
+            case "left":
+              await sandbox.leftClick(x, y);
+              break;
+            case "right":
+              await sandbox.rightClick(x, y);
+              break;
+            case "middle":
+            case "wheel":
+              await sandbox.middleClick(x, y);
+              break;
+            default:
+              throw new ComputerProviderError(`Unsupported button: ${button}`);
           }
-        },
-        shouldRetryError: shouldRetryE2B,
-        logger: logger,
-      });
+
+          return {
+            type: "click",
+            actionPerformed: `Clicked (button: ${button}) at position (${x}, ${y})`,
+            reasoning:
+              context.reasoning ??
+              `Clicked (button: ${button}) at position (${x}, ${y})`,
+            timestamp: new Date().toISOString(),
+          };
+        }
+        case "double_click": {
+          const { x, y } = action;
+          await sandbox.doubleClick(x, y);
+          return {
+            type: "double_click",
+            actionPerformed: `Double-clicked at position (${x}, ${y})`,
+            reasoning:
+              context.reasoning ?? `Double-clicked at position (${x}, ${y})`,
+            timestamp: new Date().toISOString(),
+          };
+        }
+        case "scroll": {
+          const { x, y, scroll_x: scrollX, scroll_y: scrollY } = action;
+
+          // arbitrary number of 100 pixels per notch
+          const scrollYNotches = Math.abs(Math.floor(scrollY / 100)) || 1;
+
+          // TODO: Figure out how to handle scrollX
+          await sandbox.moveMouse(x, y);
+          await sandbox.scroll(scrollY > 0 ? "down" : "up", scrollYNotches);
+          return {
+            type: "scroll",
+            actionPerformed: `Scrolled by (scrollX=${scrollX}, scrollY=${scrollY}) at mouse position (${x},${y})`,
+            reasoning:
+              context.reasoning ??
+              `Scrolled by (scrollX=${scrollX}, scrollY=${scrollY}) at mouse position (${x},${y})`,
+            timestamp: new Date().toISOString(),
+          };
+        }
+        case "keypress": {
+          const { keys } = action;
+          await sandbox.press(keys);
+
+          return {
+            type: "keypress",
+            actionPerformed: `Pressed keys: ${keys.join("+")}`,
+            reasoning: context.reasoning ?? `Pressed keys: ${keys.join("+")}`,
+            timestamp: new Date().toISOString(),
+          };
+        }
+        case "type": {
+          const { text } = action;
+          await sandbox.write(text);
+          return {
+            type: "type",
+            actionPerformed: `Typed text: ${text}`,
+            reasoning: context.reasoning ?? `Typed text: ${text}`,
+            timestamp: new Date().toISOString(),
+          };
+        }
+
+        case "drag": {
+          const { path } = action;
+          if (path.length < 2) {
+            throw new ComputerProviderError(
+              "Drag path invalid for computer action.",
+            );
+          }
+
+          const firstPoint = path[0];
+          const lastPoint = path[path.length - 1];
+          if (!firstPoint || !lastPoint) {
+            throw new ComputerProviderError(
+              "Bad drag path: Drag path invalid for computer action.",
+            );
+          }
+
+          await sandbox.drag(
+            [firstPoint.x, firstPoint.y],
+            [lastPoint.x, lastPoint.y],
+          );
+          return {
+            type: "drag",
+            actionPerformed: `Dragged mouse from (${firstPoint.x},${firstPoint.y}) to (${lastPoint.x},${lastPoint.y})`,
+            reasoning:
+              context.reasoning ??
+              `Dragged mouse from (${firstPoint.x},${firstPoint.y}) to (${lastPoint.x},${lastPoint.y})`,
+            timestamp: new Date().toISOString(),
+          };
+        }
+        case "move": {
+          const { x, y } = action;
+          await sandbox.moveMouse(x, y);
+          return {
+            type: "move",
+            actionPerformed: `Moved mouse to (${x}, ${y})`,
+            reasoning: context.reasoning ?? `Moved mouse to (${x}, ${y})`,
+            timestamp: new Date().toISOString(),
+          };
+        }
+        default: {
+          const _never: never = action;
+          throw new Error("Unsupported action type.");
+        }
+      }
     },
   };
 }
