@@ -12,6 +12,7 @@ import {
 import type { Logger } from "@trymeka/core/utils/logger";
 import {
   type CoreMessage,
+  JSONParseError,
   type LanguageModel,
   NoSuchToolError,
   type Tool as VercelTool,
@@ -143,6 +144,9 @@ export function createVercelAIProvider({
                   {
                     text,
                     error,
+                    failedText: JSONParseError.isInstance(error)
+                      ? error.text
+                      : undefined,
                   },
                 );
                 return Promise.resolve(text);
@@ -185,17 +189,19 @@ export function createVercelAIProvider({
               JSON.stringify(toolCall.args),
               "Please review the generated object and fix the arguments based on the required schema.",
             ].join("\n"),
-            experimental_repairText: ({ text, error }) => {
-              logger?.info("[VercelAIProvider] Error generating object", {
+            experimental_repairText: ({ text }) => {
+              logger?.warn("[VercelAIProvider] Error generating object", {
                 text,
-                error,
               });
               return Promise.resolve(text);
             },
             maxRetries: 3,
           }).catch((error) => {
-            logger?.error("[VercelAIProvider] Error generating object", {
+            logger?.error("[VercelAIProvider] Failed to generate object", {
               error: error.message,
+              failedText: JSONParseError.isInstance(error)
+                ? error.text
+                : undefined,
             });
             return null;
           });
@@ -240,10 +246,16 @@ export function createVercelAIProvider({
         maxRetries: 3,
         ...vercelOptions,
         experimental_repairText: ({ text, error }) => {
-          logger?.warn("[VercelAIProvider] Error generating object", {
-            text,
-            error,
-          });
+          logger?.warn(
+            "[VercelAIProvider] Failed to generate appropriate object",
+            {
+              text,
+              error,
+              failedText: JSONParseError.isInstance(error)
+                ? error.text
+                : undefined,
+            },
+          );
           return Promise.resolve(text);
         },
       });
