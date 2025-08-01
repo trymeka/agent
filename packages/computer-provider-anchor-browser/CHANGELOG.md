@@ -1,5 +1,11 @@
 # @trymeka/computer-provider-anchor-browser
 
+## 0.0.14
+
+### Patch Changes
+
+- ff285ca: fix: add retries for alll 500+ status
+
 ## 0.0.13
 
 ### Patch Changes
