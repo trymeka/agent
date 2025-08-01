@@ -1,5 +1,11 @@
 # @trymeka/core
 
+## 0.0.24
+
+### Patch Changes
+
+- fd2cbff: chore: add better logging and visibility
+
 ## 0.0.23
 
 ### Patch Changes

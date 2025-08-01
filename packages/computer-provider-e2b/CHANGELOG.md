@@ -1,5 +1,14 @@
 # @trymeka/computer-provider-e2b
 
+## 0.0.9
+
+### Patch Changes
+
+- fd2cbff: feat: add support for retries on E2B SDK calls
+- Updated dependencies [fd2cbff]
+  - @trymeka/core@0.0.24
+  - @trymeka/computer-provider-core@0.0.12
+
 ## 0.0.8
 
 ### Patch Changes
