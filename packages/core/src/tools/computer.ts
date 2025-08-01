@@ -306,7 +306,7 @@ export function createComputerTool<T, R>({
 } {
   return {
     description:
-      "Execute a computer action like clicking, dragging, typing, scrolling, etc. Use this for ALL interactions with the screen.",
+      "Execute a computer action like clicking, dragging, typing, scrolling, etc. Use this for MOST interactions with the screen. Use the wait_tool to wait for a certain amount of time. DO NOT USE this tool to wait for a certain amount of time.",
     schema: computerToolSchema,
     getCurrentUrl: (context) => {
       return computerProvider.getCurrentUrl(context.sessionId);
