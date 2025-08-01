@@ -1,5 +1,13 @@
 # @trymeka/ai-provider-vercel
 
+## 0.0.24
+
+### Patch Changes
+
+- fd2cbff: chore: add better logging and visibility
+- Updated dependencies [fd2cbff]
+  - @trymeka/core@0.0.24
+
 ## 0.0.23
 
 ### Patch Changes

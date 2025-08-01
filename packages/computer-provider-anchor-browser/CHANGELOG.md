@@ -1,5 +1,14 @@
 # @trymeka/computer-provider-anchor-browser
 
+## 0.0.13
+
+### Patch Changes
+
+- fd2cbff: feat: add retries for 500 and transient errors
+- Updated dependencies [fd2cbff]
+  - @trymeka/core@0.0.24
+  - @trymeka/computer-provider-core@0.0.12
+
 ## 0.0.12
 
 ### Patch Changes
