@@ -46,7 +46,7 @@ const CUA_KEY_TO_PLAYWRIGHT_KEY: Record<string, string> = {
 };
 
 const createAnchorClient =
-  (apiKey: string) =>
+  (apiKey: string, logger?: Logger) =>
   async ({
     anchorId,
     path,
@@ -90,7 +90,7 @@ const createAnchorClient =
         // This happens when fetch fails for some reason due to no internet connection, etc.
         return true;
       },
-      logger: console,
+      logger: logger ?? createNoOpLogger(),
     });
     if (!response.ok) {
       const error = (await response.json()) as {
@@ -219,7 +219,7 @@ export function createAnchorBrowserComputerProvider(options: {
     }
   >();
 
-  const anchorClient = createAnchorClient(options.apiKey);
+  const anchorClient = createAnchorClient(options.apiKey, logger);
 
   return {
     screenSize() {
@@ -271,7 +271,7 @@ export function createAnchorBrowserComputerProvider(options: {
         );
       }
 
-      logger.info("[ComputerProvider] instance started", {
+      logger.info("[ComputerProvider] anchor browser instance started", {
         sessionId,
       });
 
@@ -284,7 +284,8 @@ export function createAnchorBrowserComputerProvider(options: {
       };
       const anchorSessionId = anchorSession.data.id;
 
-      logger.info("[ComputerProvider] anchorSessionId", {
+      logger.info("[ComputerProvider] anchorSession", {
+        anchorSessionId,
         streamUrl: anchorSession.data.live_view_url,
       });
 
