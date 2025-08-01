@@ -71,7 +71,7 @@ const createAnchorClient =
           },
           body: method === "GET" ? null : JSON.stringify(body),
         }).then(async (res) => {
-          if (res.status === 500) {
+          if (res.status >= 500) {
             console.log(
               `Response calling anchor browser ${anchorId}${path}: ${res.status}`,
             );
