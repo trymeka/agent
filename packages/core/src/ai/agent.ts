@@ -364,7 +364,7 @@ export function createAgent<T, R>(options: {
 
         while (step < MAX_STEPS) {
           const messages = getMessageInput(step);
-          const processedMessages = await processMessages(messages);
+          const processedMessages = await processMessages(messages, logger);
           logger.info(`[Agent]: Step ${step}`, {
             messages: processedMessages.map((m) =>
               m.content.flatMap((c) =>

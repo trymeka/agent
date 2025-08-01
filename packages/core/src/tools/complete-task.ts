@@ -99,8 +99,10 @@ Respond with either an APPROVED or REFLECTION object based on your evaluation. F
           } satisfies UserMessage,
         ];
 
-        const processedEvaluationMessages =
-          await processMessages(evaluationMessages);
+        const processedEvaluationMessages = await processMessages(
+          evaluationMessages,
+          logger,
+        );
         logger?.info("[CompleteTaskTool] Evaluating task completion");
         const evaluationResult = await evaluator.generateObject({
           schema: z.object({
