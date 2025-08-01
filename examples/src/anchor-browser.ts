@@ -2,7 +2,6 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createVercelAIProvider } from "@trymeka/ai-provider-vercel";
 import { createAnchorBrowserComputerProvider } from "@trymeka/computer-provider-anchor-browser";
 import { createAgent } from "@trymeka/core/ai/agent";
-import { z } from "zod";
 
 /**
  * This example shows how to use the Anthropic model to run a task.
@@ -32,18 +31,19 @@ const agent = createAgent({
 const session = await agent.initializeSession();
 console.log("session live url", session.get()?.liveUrl);
 const task = await session.runTask({
-  instructions: "Read the top article and summarize them",
+  instructions:
+    "Go through the show hacker news and identify what the top 7 posts have in common. Distill down to the most important 3 points and summarize them while using the original text as evidence. Also include the timing for the various posts.",
   initialUrl: "https://news.ycombinator.com",
-  outputSchema: z.object({
-    articles: z.array(
-      z.object({
-        title: z.string(),
-        url: z.string(),
-        summary: z.string(),
-        author: z.string(),
-      }),
-    ),
-  }),
+  // outputSchema: z.object({
+  //   articles: z.array(
+  //     z.object({
+  //       title: z.string(),
+  //       url: z.string(),
+  //       summary: z.string(),
+  //       author: z.string(),
+  //     }),
+  //   ),
+  // }),
 });
 
 console.log("Task", JSON.stringify(task.result, null, 2));
