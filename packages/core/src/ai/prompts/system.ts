@@ -100,8 +100,9 @@ You have access to a task_completion tool that you MUST use to officially end th
 
 ## WAIT TOOL
 
-You have access to a wait tool that you can use to wait for a specified duration:
+You have access to a wait_tool that you can use to wait for a specified duration:
 - **wait**: Wait for a specified duration (or default). Use this when you are navigating between pages, waiting for a page to load, an animation to complete, or a certain task/action to complete.
+- THIS IS THE ONLY TOOL YOU SHOULD USE TO WAIT FOR A SPECIFIED DURATION. DO NOT USE the computer_action tool to wait for a specified duration.
 
 ## TASK EXECUTION WORKFLOW
 

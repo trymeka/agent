@@ -8,6 +8,7 @@ import {
   ComputerProviderError,
 } from "@trymeka/core";
 import { type Logger, createNoOpLogger } from "@trymeka/core/utils/logger";
+import { retryWithExponentialBackoff } from "@trymeka/core/utils/retry";
 import { type Browser, type Page, chromium } from "playwright-core";
 
 const CUA_KEY_TO_PLAYWRIGHT_KEY: Record<string, string> = {
@@ -45,7 +46,7 @@ const CUA_KEY_TO_PLAYWRIGHT_KEY: Record<string, string> = {
 };
 
 const createAnchorClient =
-  (apiKey: string) =>
+  (apiKey: string, logger?: Logger) =>
   async ({
     anchorId,
     path,
@@ -60,26 +61,43 @@ const createAnchorClient =
     if (method !== "GET" && !body) {
       throw new ComputerProviderError(`Body is required for method ${method}`);
     }
-    const response = await fetch(
-      `https://api.anchorbrowser.io/v1/sessions/${anchorId}${path}`,
-      {
-        method,
-        headers: {
-          "anchor-api-key": apiKey,
-          "Content-Type": "application/json",
-        },
-        body: method === "GET" ? null : JSON.stringify(body),
+    const response = await retryWithExponentialBackoff({
+      fn: () =>
+        fetch(`https://api.anchorbrowser.io/v1/sessions/${anchorId}${path}`, {
+          method,
+          headers: {
+            "anchor-api-key": apiKey,
+            "Content-Type": "application/json",
+          },
+          body: method === "GET" ? null : JSON.stringify(body),
+        }).then(async (res) => {
+          if (res.status === 500) {
+            console.log(
+              `Response calling anchor browser ${anchorId}${path}: ${res.status}`,
+            );
+            const error = await res.text();
+            throw new ComputerProviderError(
+              `Failed to perform ${method} ${path}: ${error} (500)`,
+            );
+          }
+          return res;
+        }),
+      shouldRetryError: (e) => {
+        if (e instanceof ComputerProviderError) {
+          // We retry on 500 errors
+          return true;
+        }
+        // This happens when fetch fails for some reason due to no internet connection, etc.
+        return true;
       },
-    );
+      logger: logger ?? createNoOpLogger(),
+    });
     if (!response.ok) {
       const error = (await response.json()) as {
         error: { code: number; message: string };
       };
       throw new ComputerProviderError(
-        `Failed to perform ${method} ${path}: ${error.error.code} ${error.error.message}`,
-        {
-          extraArgs: error,
-        },
+        `Failed to perform ${method} ${path}: ${error.error.code} ${JSON.stringify(error)}`,
       );
     }
     return response;
@@ -201,7 +219,7 @@ export function createAnchorBrowserComputerProvider(options: {
     }
   >();
 
-  const anchorClient = createAnchorClient(options.apiKey);
+  const anchorClient = createAnchorClient(options.apiKey, logger);
 
   return {
     screenSize() {
@@ -253,7 +271,7 @@ export function createAnchorBrowserComputerProvider(options: {
         );
       }
 
-      logger.info("[ComputerProvider] instance started", {
+      logger.info("[ComputerProvider] anchor browser instance started", {
         sessionId,
       });
 
@@ -266,7 +284,8 @@ export function createAnchorBrowserComputerProvider(options: {
       };
       const anchorSessionId = anchorSession.data.id;
 
-      logger.info("[ComputerProvider] anchorSessionId", {
+      logger.info("[ComputerProvider] anchorSession", {
+        anchorSessionId,
         streamUrl: anchorSession.data.live_view_url,
       });
 
@@ -277,9 +296,6 @@ export function createAnchorBrowserComputerProvider(options: {
         logger.info(
           `[ComputerProvider] Successfully navigated to initial url ${options.initialUrl}`,
         );
-      } else {
-        await page.goto("https://www.google.com");
-        logger.info("[ComputerProvider] Successfully navigated to google.com");
       }
       sessionMap.set(sessionId, {
         browser,
