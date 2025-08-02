@@ -1,6 +1,5 @@
 import { z } from "zod";
 import type { AIProvider, AgentLog, AgentMessage, Session, Task } from ".";
-import type { SerializableSessionState } from "./session-persistence";
 import { type Tool, createCompleteTaskTool, createWaitTool } from "../tools";
 import { type ComputerProvider, createComputerTool } from "../tools/computer";
 import { ComputerProviderError, ToolCallError } from "../tools/errors";
@@ -9,6 +8,7 @@ import { type Logger, createNoOpLogger } from "../utils/logger";
 import { processMessages } from "../utils/process-messages";
 import { AIProviderError, AgentError } from "./errors";
 import { SYSTEM_PROMPT } from "./prompts/system";
+import type { SerializableSessionState } from "./session-persistence";
 
 const sessionIdGenerator = () => `session_${crypto.randomUUID()}`;
 
@@ -622,9 +622,9 @@ export function createAgent<T, R>(options: {
           sessionId,
           currentStep: currentTask.logs.length,
           instructions: currentTask.instructions,
-          initialUrl: currentTask.initialUrl,
+          ...(currentTask.initialUrl && { initialUrl: currentTask.initialUrl }),
           computerProviderId: currentSession.computerProviderId || "",
-          liveUrl: currentSession.liveUrl,
+          ...(currentSession.liveUrl && { liveUrl: currentSession.liveUrl }),
           task: {
             id: currentTask.id,
             logs: currentTask.logs,
