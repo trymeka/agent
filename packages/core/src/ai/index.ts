@@ -179,3 +179,7 @@ export interface AIProvider {
 
 export { createAgent } from "./agent";
 export { AIProviderError, AgentError } from "./errors";
+export type {
+  SerializableSessionState,
+  SessionRestorationResult,
+} from "./session-persistence";
