@@ -622,7 +622,7 @@ export function createAgent<T, R>(options: {
         let cdpUrl: string | undefined;
         try {
           const instance = await computerProvider.getInstance(sessionId);
-          cdpUrl = instance.cdpUrl;
+          cdpUrl = (instance as { cdpUrl: string }).cdpUrl;
         } catch (error) {
           logger.warn(`Could not get CDP URL from computer provider: ${error}`);
         }
