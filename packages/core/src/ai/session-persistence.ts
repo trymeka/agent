@@ -14,6 +14,7 @@ export interface SerializableSessionState {
   // Browser connection info
   computerProviderId: string;
   liveUrl?: string;
+  cdpUrl?: string;
 
   // Current task state
   task: {

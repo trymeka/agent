@@ -580,7 +580,7 @@ export function createAgent<T, R>(options: {
        * @returns The serializable session state.
        * @throws {AgentError} If the session is not found or no task is running.
        */
-      save: (): SerializableSessionState => {
+      save: async (): Promise<SerializableSessionState> => {
         const currentSession = sessionMap.get(sessionId);
         if (!currentSession) {
           throw new AgentError(`Session not found for sessionId: ${sessionId}`);
@@ -618,6 +618,15 @@ export function createAgent<T, R>(options: {
           }
         }
 
+        // Get CDP URL from computer provider if available
+        let cdpUrl: string | undefined;
+        try {
+          const instance = await computerProvider.getInstance(sessionId);
+          cdpUrl = instance.cdpUrl;
+        } catch (error) {
+          logger.warn(`Could not get CDP URL from computer provider: ${error}`);
+        }
+
         const state: SerializableSessionState = {
           sessionId,
           currentStep: currentTask.logs.length,
@@ -625,6 +634,7 @@ export function createAgent<T, R>(options: {
           ...(currentTask.initialUrl && { initialUrl: currentTask.initialUrl }),
           computerProviderId: currentSession.computerProviderId || "",
           ...(currentSession.liveUrl && { liveUrl: currentSession.liveUrl }),
+          ...(cdpUrl && { cdpUrl }),
           task: {
             id: currentTask.id,
             logs: currentTask.logs,
@@ -793,6 +803,25 @@ export function createAgent<T, R>(options: {
 
       // Create session object first
       const session = createSession(sessionId);
+
+      // Reconnect to the existing computer provider session if we have the CDP URL
+      sessionMap.set(sessionId, {
+        id: sessionId,
+        liveUrl: state.liveUrl,
+        computerProviderId: state.computerProviderId,
+        tasks: [
+          {
+            id: state.task.id,
+            instructions: state.instructions,
+            initialUrl: state.initialUrl,
+            logs: state.task.logs,
+            result: undefined,
+          },
+        ],
+        status: "idle",
+      });
+
+      logger.info(`Computer provider session reconnected for ${sessionId}`);
 
       // Load the saved state into the session
       session.load(state);

@@ -132,6 +132,7 @@ export function createAnchorBrowserComputerProvider(options: {
     page: Page;
     liveUrl: string | undefined;
     anchorSessionId: string | undefined;
+    cdpUrl: string | undefined;
   },
   {
     session: {
@@ -216,6 +217,7 @@ export function createAnchorBrowserComputerProvider(options: {
       page: Page;
       anchorSessionId: string;
       liveUrl: string;
+      cdpUrl: string;
     }
   >();
 
@@ -232,6 +234,7 @@ export function createAnchorBrowserComputerProvider(options: {
         page: result.page,
         liveUrl: result.liveUrl,
         anchorSessionId: result.anchorSessionId,
+        cdpUrl: result.cdpUrl,
       });
     },
 
@@ -302,6 +305,7 @@ export function createAnchorBrowserComputerProvider(options: {
         page,
         anchorSessionId,
         liveUrl: anchorSession.data.live_view_url,
+        cdpUrl: anchorSession.data.cdp_url,
       });
 
       return {
