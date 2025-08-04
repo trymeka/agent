@@ -228,6 +228,11 @@ export function createAnchorBrowserComputerProvider(options: {
       return Promise.resolve(screenSize);
     },
     getInstance(sessionId: string) {
+      logger.info("[ComputerProvider] getInstance called", {
+        sessionId,
+        sessionMapKeys: Array.from(sessionMap.keys()),
+        sessionMapSize: sessionMap.size,
+      });
       const result = getInstance(sessionId, sessionMap);
       return Promise.resolve({
         browser: result.browser,
@@ -375,6 +380,8 @@ export function createAnchorBrowserComputerProvider(options: {
           sessionId,
           anchorSessionId: computerProviderId,
           liveUrl,
+          sessionMapKeys: Array.from(sessionMap.keys()),
+          sessionMapSize: sessionMap.size,
         });
       } catch (error) {
         logger.error("[ComputerProvider] Failed to restore session", {

@@ -623,8 +623,15 @@ export function createAgent<T, R>(options: {
         try {
           const instance = await computerProvider.getInstance(sessionId);
           cdpUrl = (instance as { cdpUrl: string }).cdpUrl;
+          logger.info(`Retrieved CDP URL for session save`, {
+            sessionId,
+            cdpUrl,
+            instanceKeys: Object.keys(instance as object),
+          });
         } catch (error) {
-          logger.warn(`Could not get CDP URL from computer provider: ${error}`);
+          logger.warn(`Could not get CDP URL from computer provider: ${error}`, {
+            sessionId,
+          });
         }
 
         const state: SerializableSessionState = {
@@ -849,7 +856,10 @@ export function createAgent<T, R>(options: {
       // Load the saved state into the session
       session.load(state);
 
-      logger.info(`Session ${sessionId} restored from saved state`);
+      logger.info(`Session ${sessionId} restored from saved state`, {
+        agentSessionMapKeys: Array.from(sessionMap.keys()),
+        agentSessionMapSize: sessionMap.size,
+      });
 
       return session;
     },

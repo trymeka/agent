@@ -49,6 +49,11 @@ export function getPage(browser: Browser, providerName: string): Page {
 export function getInstance<T>(sessionId: string, sessionMap: Map<string, T>) {
   const result = sessionMap.get(sessionId);
   if (!result) {
+    console.error(`[getInstance] sessionId ${sessionId} not found in sessionMap`, {
+      sessionId,
+      sessionMapKeys: Array.from(sessionMap.keys()),
+      sessionMapSize: sessionMap.size,
+    });
     throw new ComputerProviderError(
       `No instance found for sessionId ${sessionId}. Call .start(sessionId) first.`,
     );
