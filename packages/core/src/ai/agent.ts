@@ -8,6 +8,7 @@ import { type Logger, createNoOpLogger } from "../utils/logger";
 import { processMessages } from "../utils/process-messages";
 import { AIProviderError, AgentError } from "./errors";
 import { SYSTEM_PROMPT } from "./prompts/system";
+import type { SerializableSessionState } from "./session-persistence";
 
 const sessionIdGenerator = () => `session_${crypto.randomUUID()}`;
 
@@ -73,8 +74,17 @@ export function createAgent<T, R>(options: {
   const logger = loggerOverride ?? createNoOpLogger();
 
   const sessionMap = new Map<string, Session>();
+  const sessionObjectCache = new Map<
+    string,
+    ReturnType<typeof createSession>
+  >();
 
   function createSession(sessionId: string) {
+    // Session-level state for persistence
+    let sessionMemoryStore: SessionMemoryStore | null = null;
+    let sessionConversationChunk: Map<number, AgentMessage[]> | null = null;
+    let sessionConversationHistory: AgentMessage[] | null = null;
+
     return {
       id: sessionId,
       /**
@@ -173,8 +183,11 @@ export function createAgent<T, R>(options: {
         const MAX_STEPS = task.maxSteps ?? 100;
         const CONVERSATION_LOOK_BACK = 7;
 
-        // Create persistent memory store for this task
-        const memoryStore = new SessionMemoryStore();
+        // Create or reuse persistent memory store for this task
+        if (!sessionMemoryStore) {
+          sessionMemoryStore = new SessionMemoryStore();
+        }
+        const memoryStore = sessionMemoryStore;
 
         const coreTools = {
           computer_action: createComputerTool({
@@ -209,8 +222,9 @@ export function createAgent<T, R>(options: {
           ...task.customTools,
         };
 
-        const conversationHistory: AgentMessage[] = [];
-        const conversationChunk = new Map<number, AgentMessage[]>();
+        // Conversation state will be initialized after we determine if resuming or starting new
+        let conversationHistory: AgentMessage[];
+        let conversationChunk: Map<number, AgentMessage[]>;
         function buildMessageInput(step: number, messages: AgentMessage[]) {
           conversationHistory.push(...messages);
           const chunk = conversationChunk.get(step);
@@ -262,16 +276,6 @@ export function createAgent<T, R>(options: {
           return messages;
         }
 
-        if (task.initialUrl) {
-          await computerProvider.navigateTo({
-            sessionId,
-            url: task.initialUrl,
-          });
-          logger.info("[Agent] Navigated to initial URL", {
-            initialUrl: task.initialUrl,
-          });
-        }
-
         const [groundModelName, alternateModelName] = await Promise.all([
           ground.modelName(),
           alternateGround?.modelName(),
@@ -297,15 +301,63 @@ export function createAgent<T, R>(options: {
           throw new AgentError(`Session not found for sessionId: ${sessionId}`);
         }
         currentSession.status = "running";
-        const currentTask: Omit<Task<T>, "result"> & { result: T | undefined } =
-          {
+
+        // Check if there's an existing unfinished task to resume
+        let currentTask: Omit<Task<T>, "result"> & { result: T | undefined };
+        const existingTask =
+          currentSession.tasks[currentSession.tasks.length - 1];
+
+        if (
+          existingTask &&
+          !existingTask.result &&
+          existingTask.logs.length > 0
+        ) {
+          // Resume existing task - use existing conversation state
+          currentTask = existingTask as Omit<Task<T>, "result"> & {
+            result: T | undefined;
+          };
+          conversationHistory = sessionConversationHistory || [];
+          conversationChunk =
+            sessionConversationChunk || new Map<number, AgentMessage[]>();
+
+          logger.info("[Agent] Resuming existing task", {
+            taskId: currentTask.id,
+            currentStep: currentTask.logs.length,
+            instructions: currentTask.instructions,
+          });
+        } else {
+          // Create new task - initialize fresh conversation state
+          currentTask = {
             id: crypto.randomUUID(),
             instructions: task.instructions,
             logs: [],
             result: undefined,
             initialUrl: task.initialUrl,
           };
-        currentSession.tasks.push(currentTask);
+          currentSession.tasks.push(currentTask);
+
+          // Initialize fresh conversation state for new tasks
+          sessionConversationHistory = [];
+          sessionConversationChunk = new Map<number, AgentMessage[]>();
+          conversationHistory = sessionConversationHistory;
+          conversationChunk = sessionConversationChunk;
+
+          logger.info("[Agent] Starting new task", {
+            taskId: currentTask.id,
+            instructions: task.instructions,
+          });
+
+          // Only navigate to initial URL for new tasks
+          if (task.initialUrl) {
+            await computerProvider.navigateTo({
+              sessionId,
+              url: task.initialUrl,
+            });
+            logger.info("[Agent] Navigated to initial URL", {
+              initialUrl: task.initialUrl,
+            });
+          }
+        }
 
         logger.info("[Agent] Starting task execution", {
           task: {
@@ -315,7 +367,11 @@ export function createAgent<T, R>(options: {
           tools: Object.keys(allTools),
         });
 
-        let step = 1;
+        // Determine starting step - use current logs length + 1 for resumed sessions
+        let step =
+          currentTask.logs.length > 0 ? currentTask.logs.length + 1 : 1;
+        const isResumedSession = currentTask.logs.length > 0;
+
         const screenSize = await computerProvider
           .screenSize()
           .catch((error) => {
@@ -323,44 +379,48 @@ export function createAgent<T, R>(options: {
               cause: error,
             });
           });
-        const firstScreenshot = await computerProvider
-          .takeScreenshot(sessionId)
-          .catch((error) => {
-            throw new ComputerProviderError("Failed to take screenshot", {
-              cause: error,
-            });
-          });
-        const uploadResult = await computerProvider
-          .uploadScreenshot?.({
-            screenshotBase64: firstScreenshot,
-            sessionId,
-            step,
-          })
-          .catch((error) => {
-            throw new ComputerProviderError("Failed to upload screenshot", {
-              cause: error,
-            });
-          });
 
-        buildMessageInput(step, [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: `${task.instructions}
-    
-    Here is the current state of the screen:`,
-              },
-              {
-                type: "image",
-                image: uploadResult
-                  ? new URL(uploadResult.url)
-                  : firstScreenshot,
-              },
-            ],
-          },
-        ]);
+        // Only take initial screenshot and build initial message for new sessions
+        if (!isResumedSession) {
+          const firstScreenshot = await computerProvider
+            .takeScreenshot(sessionId)
+            .catch((error) => {
+              throw new ComputerProviderError("Failed to take screenshot", {
+                cause: error,
+              });
+            });
+          const uploadResult = await computerProvider
+            .uploadScreenshot?.({
+              screenshotBase64: firstScreenshot,
+              sessionId,
+              step,
+            })
+            .catch((error) => {
+              throw new ComputerProviderError("Failed to upload screenshot", {
+                cause: error,
+              });
+            });
+
+          buildMessageInput(step, [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: `${task.instructions}
+      
+      Here is the current state of the screen:`,
+                },
+                {
+                  type: "image",
+                  image: uploadResult
+                    ? new URL(uploadResult.url)
+                    : firstScreenshot,
+                },
+              ],
+            },
+          ]);
+        }
 
         while (step < MAX_STEPS) {
           const messages = getMessageInput(step);
@@ -550,6 +610,168 @@ export function createAgent<T, R>(options: {
           `Agent has reached maximum steps of ${MAX_STEPS}.`,
         );
       },
+
+      /**
+       * Saves the current session state for persistence.
+       * @returns The serializable session state.
+       * @throws {AgentError} If the session is not found or no task is running.
+       */
+      save: async (): Promise<SerializableSessionState> => {
+        const currentSession = sessionMap.get(sessionId);
+        if (!currentSession) {
+          throw new AgentError(`Session not found for sessionId: ${sessionId}`);
+        }
+
+        const currentTask =
+          currentSession.tasks[currentSession.tasks.length - 1];
+        if (!currentTask) {
+          throw new AgentError(`No active task found for session ${sessionId}`);
+        }
+
+        // Extract conversation chunks (only last 7 steps)
+        const conversationChunks: Record<number, AgentMessage[]> = {};
+        if (sessionConversationChunk) {
+          const currentStep = currentTask.logs.length;
+          const startStep = Math.max(1, currentStep - 7);
+
+          for (let i = startStep; i <= currentStep; i++) {
+            const chunk = sessionConversationChunk.get(i);
+            if (chunk) {
+              conversationChunks[i] = chunk;
+            }
+          }
+        }
+
+        // Extract memory data
+        const memoryData: Record<string, string> = {};
+        if (sessionMemoryStore) {
+          const keys = sessionMemoryStore.list();
+          for (const key of keys) {
+            const value = sessionMemoryStore.get(key);
+            if (value !== undefined) {
+              memoryData[key] = value;
+            }
+          }
+        }
+
+        // Get CDP URL from computer provider if available
+        let cdpUrl: string | undefined;
+        try {
+          const instance = await computerProvider.getInstance(sessionId);
+          cdpUrl = (instance as { cdpUrl: string }).cdpUrl;
+        } catch (error) {
+          logger.warn(`Could not get CDP URL from computer provider: ${error}`);
+        }
+
+        const state: SerializableSessionState = {
+          sessionId,
+          currentStep: currentTask.logs.length,
+          instructions: currentTask.instructions,
+          ...(currentTask.initialUrl && { initialUrl: currentTask.initialUrl }),
+          computerProviderId: currentSession.computerProviderId || "",
+          ...(currentSession.liveUrl && { liveUrl: currentSession.liveUrl }),
+          ...(cdpUrl && { cdpUrl }),
+          task: {
+            id: currentTask.id,
+            logs: currentTask.logs,
+          },
+          conversationChunks,
+          memoryData,
+          createdAt: new Date().toISOString(),
+          lastSavedAt: new Date().toISOString(),
+        };
+
+        return state;
+      },
+
+      /**
+       * Pauses the current session by stopping task execution.
+       * @throws {AgentError} If the session is not found.
+       */
+      pause: (): void => {
+        const currentSession = sessionMap.get(sessionId);
+        if (!currentSession) {
+          throw new AgentError(`Session not found for sessionId: ${sessionId}`);
+        }
+
+        // Mark session as paused
+        sessionMap.set(sessionId, {
+          ...currentSession,
+          status: "idle", // Use idle status for paused state
+        });
+
+        logger.info(`Session ${sessionId} paused`);
+      },
+
+      /**
+       * Loads a saved session state.
+       * @param state The serializable session state to load.
+       * @throws {AgentError} If loading fails.
+       */
+      load: (state: SerializableSessionState): void => {
+        // Restore session in sessionMap
+        sessionMap.set(sessionId, {
+          id: sessionId,
+          computerProviderId: state.computerProviderId,
+          liveUrl: state.liveUrl,
+          status: "idle",
+          tasks: [
+            {
+              id: state.task.id,
+              instructions: state.instructions,
+              initialUrl: state.initialUrl,
+              logs: state.task.logs,
+              result: undefined, // Will be set when task completes
+            },
+          ],
+        });
+
+        // Restore conversation chunks
+        sessionConversationChunk = new Map();
+        sessionConversationHistory = [];
+
+        for (const [step, messages] of Object.entries(
+          state.conversationChunks,
+        )) {
+          sessionConversationChunk.set(Number.parseInt(step), messages);
+          sessionConversationHistory.push(...messages);
+        }
+
+        // Restore memory data
+        sessionMemoryStore = new SessionMemoryStore();
+        for (const [key, value] of Object.entries(state.memoryData)) {
+          sessionMemoryStore.set(key, value);
+        }
+
+        logger.info(`Session ${sessionId} loaded from saved state`);
+      },
+
+      /**
+       * Resumes a paused session by continuing task execution.
+       * @throws {AgentError} If the session is not found or not paused.
+       */
+      resume: (): void => {
+        const currentSession = sessionMap.get(sessionId);
+        if (!currentSession) {
+          throw new AgentError(`Session not found for sessionId: ${sessionId}`);
+        }
+
+        const currentTask =
+          currentSession.tasks[currentSession.tasks.length - 1];
+        if (!currentTask) {
+          throw new AgentError(`No task to resume for session ${sessionId}`);
+        }
+
+        // Mark as running
+        sessionMap.set(sessionId, {
+          ...currentSession,
+          status: "running",
+        });
+
+        logger.info(
+          `Session ${sessionId} resumed - ready for runTask continuation`,
+        );
+      },
     };
   }
 
@@ -565,7 +787,15 @@ export function createAgent<T, R>(options: {
       if (!currentSession) {
         throw new AgentError(`Session not found for sessionId: ${sessionId}`);
       }
-      return createSession(sessionId);
+
+      // Check if we already have a session object for this ID
+      let sessionObject = sessionObjectCache.get(sessionId);
+      if (!sessionObject) {
+        sessionObject = createSession(sessionId);
+        sessionObjectCache.set(sessionId, sessionObject);
+      }
+
+      return sessionObject;
     },
     /**
      * Initializes a new agent session.
@@ -603,7 +833,72 @@ export function createAgent<T, R>(options: {
         tasks: [],
         status: "idle",
       });
-      return createSession(sessionId);
+      const sessionObject = createSession(sessionId);
+      sessionObjectCache.set(sessionId, sessionObject);
+      return sessionObject;
+    },
+
+    /**
+     * Restores a session from saved state.
+     * @param state The serializable session state to restore.
+     * @returns A session object for the restored session.
+     * @throws {AgentError} If restoration fails.
+     */
+    restoreSession: async (state: SerializableSessionState) => {
+      const sessionId = state.sessionId;
+
+      // Create session object first and cache it
+      const session = createSession(sessionId);
+      sessionObjectCache.set(sessionId, session);
+
+      // Restore computer provider session if we have the CDP URL
+      if (
+        state.cdpUrl &&
+        state.computerProviderId &&
+        computerProvider.restoreSession
+      ) {
+        try {
+          await computerProvider.restoreSession(
+            sessionId,
+            state.cdpUrl,
+            state.liveUrl,
+            state.computerProviderId,
+          );
+          logger.info(`Computer provider session restored for ${sessionId}`);
+        } catch (error) {
+          logger.error(
+            `Failed to restore computer provider session for ${sessionId}`,
+            { error },
+          );
+          throw new AgentError(
+            `Failed to restore computer provider session: ${error instanceof Error ? error.message : "Unknown error"}`,
+          );
+        }
+      }
+
+      // Set up the session state
+      sessionMap.set(sessionId, {
+        id: sessionId,
+        liveUrl: state.liveUrl,
+        computerProviderId: state.computerProviderId,
+        tasks: [
+          {
+            id: state.task.id,
+            instructions: state.instructions,
+            initialUrl: state.initialUrl,
+            logs: state.task.logs,
+            result: undefined,
+          },
+        ],
+        status: "idle",
+      });
+
+      // Load the saved state into the session
+      session.load(state);
+
+      logger.info(`Session ${sessionId} restored from saved state`);
+
+      return session;
     },
   };
 

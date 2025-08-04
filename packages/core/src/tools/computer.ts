@@ -257,6 +257,21 @@ export interface ComputerProvider<T, R = Record<string, any>> {
   stop(sessionId: string): Promise<void>;
 
   /**
+   * Restores a session from a saved state by reconnecting to an existing browser instance.
+   * @param sessionId - The session ID to restore.
+   * @param cdpUrl - The CDP URL to reconnect to.
+   * @param liveUrl - The live view URL if available.
+   * @param computerProviderId - The computer provider's session ID.
+   * @throws {ComputerProviderError} If the session cannot be restored.
+   */
+  restoreSession?(
+    sessionId: string,
+    cdpUrl: string,
+    liveUrl?: string,
+    computerProviderId?: string,
+  ): Promise<void>;
+
+  /**
    * Returns the screen size of the environment.
    * @returns The width and height of the screen.
    */

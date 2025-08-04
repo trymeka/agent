@@ -132,6 +132,7 @@ export function createAnchorBrowserComputerProvider(options: {
     page: Page;
     liveUrl: string | undefined;
     anchorSessionId: string | undefined;
+    cdpUrl: string | undefined;
   },
   {
     session: {
@@ -216,6 +217,7 @@ export function createAnchorBrowserComputerProvider(options: {
       page: Page;
       anchorSessionId: string;
       liveUrl: string;
+      cdpUrl: string;
     }
   >();
 
@@ -232,6 +234,7 @@ export function createAnchorBrowserComputerProvider(options: {
         page: result.page,
         liveUrl: result.liveUrl,
         anchorSessionId: result.anchorSessionId,
+        cdpUrl: result.cdpUrl,
       });
     },
 
@@ -302,6 +305,7 @@ export function createAnchorBrowserComputerProvider(options: {
         page,
         anchorSessionId,
         liveUrl: anchorSession.data.live_view_url,
+        cdpUrl: anchorSession.data.cdp_url,
       });
 
       return {
@@ -319,6 +323,68 @@ export function createAnchorBrowserComputerProvider(options: {
         method: "DELETE",
       });
       sessionMap.delete(sessionId);
+    },
+
+    async restoreSession(
+      sessionId: string,
+      cdpUrl: string,
+      liveUrl?: string,
+      computerProviderId?: string,
+    ) {
+      logger.info("[ComputerProvider] Restoring session from CDP URL", {
+        sessionId,
+        cdpUrl,
+        liveUrl,
+        computerProviderId,
+      });
+
+      try {
+        // Connect to the existing browser session
+        const browser = await chromium.connectOverCDP(cdpUrl);
+
+        // Get the page (similar to how the computer provider does it in start method)
+        const contexts = browser.contexts();
+        let page = undefined;
+        for (const context of contexts) {
+          const pages = context.pages();
+          const nonBlankPage = pages.find((p) => p.url() !== "about:blank");
+          if (nonBlankPage) {
+            page = nonBlankPage;
+            break;
+          }
+          if (pages[0]) {
+            page = pages[0];
+            break;
+          }
+        }
+
+        if (!page) {
+          throw new ComputerProviderError("No page found in browser context");
+        }
+
+        // Restore the sessionMap entry
+        sessionMap.set(sessionId, {
+          browser,
+          page,
+          anchorSessionId: computerProviderId || "",
+          liveUrl: liveUrl || "",
+          cdpUrl,
+        });
+
+        logger.info("[ComputerProvider] Session restored successfully", {
+          sessionId,
+          anchorSessionId: computerProviderId,
+          liveUrl,
+        });
+      } catch (error) {
+        logger.error("[ComputerProvider] Failed to restore session", {
+          sessionId,
+          error,
+        });
+        throw new ComputerProviderError(
+          `Failed to restore session: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
+      }
     },
     navigateTo: async (args: { sessionId: string; url: string }) => {
       const { sessionId, url } = args;
