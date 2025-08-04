@@ -798,13 +798,38 @@ export function createAgent<T, R>(options: {
      * @returns A session object for the restored session.
      * @throws {AgentError} If restoration fails.
      */
-    restoreSession: (state: SerializableSessionState) => {
+    restoreSession: async (state: SerializableSessionState) => {
       const sessionId = state.sessionId;
 
       // Create session object first
       const session = createSession(sessionId);
 
-      // Reconnect to the existing computer provider session if we have the CDP URL
+      // Restore computer provider session if we have the CDP URL
+      if (
+        state.cdpUrl &&
+        state.computerProviderId &&
+        computerProvider.restoreSession
+      ) {
+        try {
+          await computerProvider.restoreSession(
+            sessionId,
+            state.cdpUrl,
+            state.liveUrl,
+            state.computerProviderId,
+          );
+          logger.info(`Computer provider session restored for ${sessionId}`);
+        } catch (error) {
+          logger.error(
+            `Failed to restore computer provider session for ${sessionId}`,
+            { error },
+          );
+          throw new AgentError(
+            `Failed to restore computer provider session: ${error instanceof Error ? error.message : "Unknown error"}`,
+          );
+        }
+      }
+
+      // Set up the session state
       sessionMap.set(sessionId, {
         id: sessionId,
         liveUrl: state.liveUrl,
@@ -820,8 +845,6 @@ export function createAgent<T, R>(options: {
         ],
         status: "idle",
       });
-
-      logger.info(`Computer provider session reconnected for ${sessionId}`);
 
       // Load the saved state into the session
       session.load(state);
