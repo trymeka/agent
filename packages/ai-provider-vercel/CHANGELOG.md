@@ -1,5 +1,12 @@
 # @trymeka/ai-provider-vercel
 
+## 0.0.26
+
+### Patch Changes
+
+- Updated dependencies [15bdfbc]
+  - @trymeka/core@0.0.26
+
 ## 0.0.25
 
 ### Patch Changes

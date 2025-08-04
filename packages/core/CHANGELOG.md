@@ -1,5 +1,11 @@
 # @trymeka/core
 
+## 0.0.26
+
+### Patch Changes
+
+- 15bdfbc: Detailed logs on AI provider calls
+
 ## 0.0.25
 
 ### Patch Changes
