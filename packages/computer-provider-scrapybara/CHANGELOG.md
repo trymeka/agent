@@ -1,5 +1,14 @@
 # @trymeka/computer-provider-scrapybara
 
+## 0.0.26
+
+### Patch Changes
+
+- 5992f16: Add ability to persist sessions (save state & load / restore)
+- Updated dependencies [5992f16]
+  - @trymeka/computer-provider-core@0.0.13
+  - @trymeka/core@0.0.25
+
 ## 0.0.25
 
 ### Patch Changes

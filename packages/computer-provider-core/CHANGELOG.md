@@ -1,5 +1,13 @@
 # @trymeka/computer-provider-core
 
+## 0.0.13
+
+### Patch Changes
+
+- 5992f16: Add ability to persist sessions (save state & load / restore)
+- Updated dependencies [5992f16]
+  - @trymeka/core@0.0.25
+
 ## 0.0.12
 
 ### Patch Changes
