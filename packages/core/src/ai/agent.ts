@@ -74,6 +74,10 @@ export function createAgent<T, R>(options: {
   const logger = loggerOverride ?? createNoOpLogger();
 
   const sessionMap = new Map<string, Session>();
+  const sessionObjectCache = new Map<
+    string,
+    ReturnType<typeof createSession>
+  >();
 
   function createSession(sessionId: string) {
     // Session-level state for persistence
@@ -783,7 +787,15 @@ export function createAgent<T, R>(options: {
       if (!currentSession) {
         throw new AgentError(`Session not found for sessionId: ${sessionId}`);
       }
-      return createSession(sessionId);
+
+      // Check if we already have a session object for this ID
+      let sessionObject = sessionObjectCache.get(sessionId);
+      if (!sessionObject) {
+        sessionObject = createSession(sessionId);
+        sessionObjectCache.set(sessionId, sessionObject);
+      }
+
+      return sessionObject;
     },
     /**
      * Initializes a new agent session.
@@ -821,7 +833,9 @@ export function createAgent<T, R>(options: {
         tasks: [],
         status: "idle",
       });
-      return createSession(sessionId);
+      const sessionObject = createSession(sessionId);
+      sessionObjectCache.set(sessionId, sessionObject);
+      return sessionObject;
     },
 
     /**
@@ -833,8 +847,9 @@ export function createAgent<T, R>(options: {
     restoreSession: async (state: SerializableSessionState) => {
       const sessionId = state.sessionId;
 
-      // Create session object first
+      // Create session object first and cache it
       const session = createSession(sessionId);
+      sessionObjectCache.set(sessionId, session);
 
       // Restore computer provider session if we have the CDP URL
       if (
