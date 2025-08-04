@@ -437,17 +437,42 @@ export function createAgent<T, R>(options: {
 
           // Generate model response
           const currentModel = getCurrentModel(step);
+          const requestPayload = {
+            systemPrompt: SYSTEM_PROMPT({
+              screenSize,
+            }),
+            messages: processedMessages,
+            tools: allTools,
+          };
+
+          logger.info("[Agent] Sending request to AI provider", {
+            modelName: currentModel.model,
+            messagesCount: processedMessages.length,
+            toolsCount: Object.keys(allTools).length,
+            systemPromptLength: requestPayload.systemPrompt.length,
+          });
+
           const response = await currentModel.provider
-            .generateText({
-              systemPrompt: SYSTEM_PROMPT({
-                screenSize,
-              }),
-              messages: processedMessages,
-              tools: allTools,
-            })
+            .generateText(requestPayload)
             .catch((error) => {
               logger.error("[Agent] AI provider failed to generate text", {
                 error: error.message,
+                errorName: error.name,
+                errorStack: error.stack,
+                fullError: error,
+                modelName: currentModel.model,
+                requestPayload: {
+                  systemPromptLength: requestPayload.systemPrompt.length,
+                  messagesCount: requestPayload.messages.length,
+                  toolsCount: Object.keys(requestPayload.tools).length,
+                  messages: requestPayload.messages.map((msg) => ({
+                    role: msg.role,
+                    contentLength: msg.content.length,
+                    hasToolCalls: !!(
+                      "toolCalls" in msg && msg.toolCalls?.length
+                    ),
+                  })),
+                },
               });
               throw new AIProviderError("AI provider failed to generate text", {
                 cause: error,
