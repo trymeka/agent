@@ -629,9 +629,12 @@ export function createAgent<T, R>(options: {
             instanceKeys: Object.keys(instance as object),
           });
         } catch (error) {
-          logger.warn(`Could not get CDP URL from computer provider: ${error}`, {
-            sessionId,
-          });
+          logger.warn(
+            `Could not get CDP URL from computer provider: ${error}`,
+            {
+              sessionId,
+            },
+          );
         }
 
         const state: SerializableSessionState = {
