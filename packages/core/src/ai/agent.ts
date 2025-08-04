@@ -819,7 +819,7 @@ export function createAgent<T, R>(options: {
         hasCdpUrl: !!state.cdpUrl,
         hasComputerProviderId: !!state.computerProviderId,
         hasRestoreMethod: !!computerProvider.restoreSession,
-        cdpUrl: state.cdpUrl ? state.cdpUrl.substring(0, 50) + "..." : "none",
+        cdpUrl: state.cdpUrl ? `${state.cdpUrl.substring(0, 50)}...` : "none",
         computerProviderId: state.computerProviderId,
       });
 

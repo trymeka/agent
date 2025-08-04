@@ -347,7 +347,7 @@ export function createAnchorBrowserComputerProvider(options: {
         // Connect to the existing browser session
         logger.info("[ComputerProvider] Attempting CDP connection", {
           sessionId,
-          cdpUrl: cdpUrl.substring(0, 50) + "...",
+          cdpUrl: `${cdpUrl.substring(0, 50)}...`,
         });
 
         const browser = await chromium.connectOverCDP(cdpUrl);
