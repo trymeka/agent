@@ -218,15 +218,9 @@ export function createAgent<T, R>(options: {
           ...task.customTools,
         };
 
-        // Create or reuse conversation state for this task
-        if (!sessionConversationHistory) {
-          sessionConversationHistory = [];
-        }
-        if (!sessionConversationChunk) {
-          sessionConversationChunk = new Map<number, AgentMessage[]>();
-        }
-        const conversationHistory = sessionConversationHistory;
-        const conversationChunk = sessionConversationChunk;
+        // Conversation state will be initialized after we determine if resuming or starting new
+        let conversationHistory: AgentMessage[];
+        let conversationChunk: Map<number, AgentMessage[]>;
         function buildMessageInput(step: number, messages: AgentMessage[]) {
           conversationHistory.push(...messages);
           const chunk = conversationChunk.get(step);
@@ -278,16 +272,6 @@ export function createAgent<T, R>(options: {
           return messages;
         }
 
-        if (task.initialUrl) {
-          await computerProvider.navigateTo({
-            sessionId,
-            url: task.initialUrl,
-          });
-          logger.info("[Agent] Navigated to initial URL", {
-            initialUrl: task.initialUrl,
-          });
-        }
-
         const [groundModelName, alternateModelName] = await Promise.all([
           ground.modelName(),
           alternateGround?.modelName(),
@@ -313,15 +297,63 @@ export function createAgent<T, R>(options: {
           throw new AgentError(`Session not found for sessionId: ${sessionId}`);
         }
         currentSession.status = "running";
-        const currentTask: Omit<Task<T>, "result"> & { result: T | undefined } =
-          {
+
+        // Check if there's an existing unfinished task to resume
+        let currentTask: Omit<Task<T>, "result"> & { result: T | undefined };
+        const existingTask =
+          currentSession.tasks[currentSession.tasks.length - 1];
+
+        if (
+          existingTask &&
+          !existingTask.result &&
+          existingTask.logs.length > 0
+        ) {
+          // Resume existing task - use existing conversation state
+          currentTask = existingTask as Omit<Task<T>, "result"> & {
+            result: T | undefined;
+          };
+          conversationHistory = sessionConversationHistory || [];
+          conversationChunk =
+            sessionConversationChunk || new Map<number, AgentMessage[]>();
+
+          logger.info("[Agent] Resuming existing task", {
+            taskId: currentTask.id,
+            currentStep: currentTask.logs.length,
+            instructions: currentTask.instructions,
+          });
+        } else {
+          // Create new task - initialize fresh conversation state
+          currentTask = {
             id: crypto.randomUUID(),
             instructions: task.instructions,
             logs: [],
             result: undefined,
             initialUrl: task.initialUrl,
           };
-        currentSession.tasks.push(currentTask);
+          currentSession.tasks.push(currentTask);
+
+          // Initialize fresh conversation state for new tasks
+          sessionConversationHistory = [];
+          sessionConversationChunk = new Map<number, AgentMessage[]>();
+          conversationHistory = sessionConversationHistory;
+          conversationChunk = sessionConversationChunk;
+
+          logger.info("[Agent] Starting new task", {
+            taskId: currentTask.id,
+            instructions: task.instructions,
+          });
+
+          // Only navigate to initial URL for new tasks
+          if (task.initialUrl) {
+            await computerProvider.navigateTo({
+              sessionId,
+              url: task.initialUrl,
+            });
+            logger.info("[Agent] Navigated to initial URL", {
+              initialUrl: task.initialUrl,
+            });
+          }
+        }
 
         logger.info("[Agent] Starting task execution", {
           task: {
