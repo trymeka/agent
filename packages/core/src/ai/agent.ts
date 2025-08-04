@@ -814,6 +814,15 @@ export function createAgent<T, R>(options: {
       // Create session object first
       const session = createSession(sessionId);
 
+      logger.info(`Starting session restoration for ${sessionId}`, {
+        sessionId,
+        hasCdpUrl: !!state.cdpUrl,
+        hasComputerProviderId: !!state.computerProviderId,
+        hasRestoreMethod: !!computerProvider.restoreSession,
+        cdpUrl: state.cdpUrl ? state.cdpUrl.substring(0, 50) + "..." : "none",
+        computerProviderId: state.computerProviderId,
+      });
+
       // Restore computer provider session if we have the CDP URL
       if (
         state.cdpUrl &&
@@ -827,7 +836,22 @@ export function createAgent<T, R>(options: {
             state.liveUrl,
             state.computerProviderId,
           );
-          logger.info(`Computer provider session restored for ${sessionId}`);
+
+          // Validate that the session was actually restored by testing getInstance
+          try {
+            await computerProvider.getInstance(sessionId);
+            logger.info(
+              `Computer provider session restored and validated for ${sessionId}`,
+            );
+          } catch (validationError) {
+            logger.error(
+              `Computer provider session restoration validation failed for ${sessionId}`,
+              { validationError },
+            );
+            throw new AgentError(
+              `Session restoration validation failed: ${validationError instanceof Error ? validationError.message : "Unknown error"}`,
+            );
+          }
         } catch (error) {
           logger.error(
             `Failed to restore computer provider session for ${sessionId}`,

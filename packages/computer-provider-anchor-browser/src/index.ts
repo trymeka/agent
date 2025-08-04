@@ -345,7 +345,15 @@ export function createAnchorBrowserComputerProvider(options: {
 
       try {
         // Connect to the existing browser session
+        logger.info("[ComputerProvider] Attempting CDP connection", {
+          sessionId,
+          cdpUrl: cdpUrl.substring(0, 50) + "...",
+        });
+
         const browser = await chromium.connectOverCDP(cdpUrl);
+        logger.info("[ComputerProvider] Successfully connected to CDP", {
+          sessionId,
+        });
 
         // Get the page (similar to how the computer provider does it in start method)
         const contexts = browser.contexts();
@@ -367,6 +375,12 @@ export function createAnchorBrowserComputerProvider(options: {
           throw new ComputerProviderError("No page found in browser context");
         }
 
+        logger.info("[ComputerProvider] Found page in browser context", {
+          sessionId,
+          pageUrl: page.url(),
+          contextCount: contexts.length,
+        });
+
         // Restore the sessionMap entry
         sessionMap.set(sessionId, {
           browser,
@@ -375,6 +389,13 @@ export function createAnchorBrowserComputerProvider(options: {
           liveUrl: liveUrl || "",
           cdpUrl,
         });
+
+        // Verify the sessionMap was populated
+        if (!sessionMap.has(sessionId)) {
+          throw new ComputerProviderError(
+            "SessionMap was not populated after restoration",
+          );
+        }
 
         logger.info("[ComputerProvider] Session restored successfully", {
           sessionId,
