@@ -445,8 +445,8 @@ export function createAgent<T, R>(options: {
             tools: allTools,
           };
 
-          logger.debug("[Agent] Sending request to AI provider", {
-            modelId: currentModel.model.modelId,
+          logger.info("[Agent] Sending request to AI provider", {
+            modelName: currentModel.model,
             messagesCount: processedMessages.length,
             toolsCount: Object.keys(allTools).length,
             systemPromptLength: requestPayload.systemPrompt.length,
@@ -460,7 +460,7 @@ export function createAgent<T, R>(options: {
                 errorName: error.name,
                 errorStack: error.stack,
                 fullError: error,
-                modelId: currentModel.model.modelId,
+                modelName: currentModel.model,
                 requestPayload: {
                   systemPromptLength: requestPayload.systemPrompt.length,
                   messagesCount: requestPayload.messages.length,
