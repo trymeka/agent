@@ -623,7 +623,7 @@ export function createAgent<T, R>(options: {
         try {
           const instance = await computerProvider.getInstance(sessionId);
           cdpUrl = (instance as { cdpUrl: string }).cdpUrl;
-          logger.info(`Retrieved CDP URL for session save`, {
+          logger.info("Retrieved CDP URL for session save", {
             sessionId,
             cdpUrl,
             instanceKeys: Object.keys(instance as object),
