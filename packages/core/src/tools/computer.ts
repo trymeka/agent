@@ -133,7 +133,7 @@ const typeActionSchema = z
 const waitActionSchema = z
   .object({
     type: z.literal("wait").describe("Type of action to perform"),
-    duration: z.number().describe("Duration to wait in seconds"),
+    duration: z.number().min(0).describe("Duration to wait in seconds"),
   })
   .describe("Wait for a specified duration in seconds.");
 
