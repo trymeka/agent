@@ -64,6 +64,9 @@ export const parseComputerToolArgs = (args: string | object) => {
   if (actionString.includes("type")) {
     return { schema: typeActionSchema, args: parsedArgs };
   }
+  if (actionString.includes("wait")) {
+    return { schema: waitActionSchema, args: parsedArgs };
+  }
   return null;
 };
 
@@ -127,6 +130,13 @@ const typeActionSchema = z
   })
   .describe("Type a certain text. Text MUST BE non-empty.");
 
+const waitActionSchema = z
+  .object({
+    type: z.literal("wait").describe("Type of action to perform"),
+    duration: z.number().min(0).describe("Duration to wait in seconds"),
+  })
+  .describe("Wait for a specified duration in seconds.");
+
 export const computerActionSchema = z.union([
   clickActionSchema,
   doubleClickActionSchema,
@@ -135,6 +145,7 @@ export const computerActionSchema = z.union([
   typeActionSchema,
   dragActionSchema,
   moveActionSchema,
+  waitActionSchema,
 ]);
 /**
  * Represents an action that can be performed by the computer, such as clicking, typing, or scrolling.
