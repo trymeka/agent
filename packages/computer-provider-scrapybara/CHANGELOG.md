@@ -1,5 +1,14 @@
 # @trymeka/computer-provider-scrapybara
 
+## 0.0.28
+
+### Patch Changes
+
+- b015dcd: Add wait tool within computer_action
+- Updated dependencies [b015dcd]
+  - @trymeka/computer-provider-core@0.0.15
+  - @trymeka/core@0.0.27
+
 ## 0.0.27
 
 ### Patch Changes
