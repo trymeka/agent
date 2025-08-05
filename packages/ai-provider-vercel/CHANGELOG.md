@@ -1,5 +1,13 @@
 # @trymeka/ai-provider-vercel
 
+## 0.0.27
+
+### Patch Changes
+
+- b015dcd: Add wait tool within computer_action
+- Updated dependencies [b015dcd]
+  - @trymeka/core@0.0.27
+
 ## 0.0.26
 
 ### Patch Changes

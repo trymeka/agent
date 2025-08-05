@@ -1,5 +1,11 @@
 # @trymeka/core
 
+## 0.0.27
+
+### Patch Changes
+
+- b015dcd: Add wait tool within computer_action
+
 ## 0.0.26
 
 ### Patch Changes
