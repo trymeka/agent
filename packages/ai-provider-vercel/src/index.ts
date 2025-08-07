@@ -11,10 +11,11 @@ import {
 } from "@trymeka/core/tools/computer";
 import type { Logger } from "@trymeka/core/utils/logger";
 import {
-  type CoreMessage,
+  type ModelMessage,
   JSONParseError,
   type LanguageModel,
   NoSuchToolError,
+  TypeValidationError,
   type Tool as VercelTool,
   generateObject,
   generateText,
@@ -22,7 +23,7 @@ import {
 } from "ai";
 import type { z } from "zod";
 
-function toCoreMessages(messages: AgentMessage[]): CoreMessage[] {
+function toCoreMessages(messages: AgentMessage[]): ModelMessage[] {
   return messages.map((message) => {
     if (message.role === "user") {
       return {
@@ -54,7 +55,7 @@ function toVercelTools<T extends z.ZodSchema>(
     // @ts-expect-error - exactOptionalPropertyTypes causing issues
     vercelTools[name] = vercelTool({
       description: tool.description,
-      parameters: tool.schema,
+      inputSchema: tool.schema,
     });
   }
   return vercelTools;
@@ -87,13 +88,17 @@ export function createVercelAIProvider({
   | "presencePenalty"
   | "providerOptions"
   | "maxRetries"
-  | "maxTokens"
+  | "maxOutputTokens"
 >): AIProvider {
   return {
     modelName() {
-      return Promise.resolve(model.modelId);
+      return Promise.resolve(typeof model === 'string' ? model : model.modelId);
     },
-    async generateText(options): Promise<GenerateTextResult> {
+    async generateText(options: {
+      systemPrompt?: string;
+      messages: AgentMessage[];
+      tools?: Record<string, Tool<z.ZodSchema, unknown>>;
+    }): Promise<GenerateTextResult> {
       const tools = toVercelTools(options.tools);
       const result = await generateText({
         model,
@@ -109,7 +114,7 @@ export function createVercelAIProvider({
         },
         experimental_repairToolCall: async ({
           toolCall,
-          parameterSchema,
+          inputSchema,
           error,
         }) => {
           // do not attempt to fix invalid tool names
@@ -119,7 +124,7 @@ export function createVercelAIProvider({
 
           logger?.info("[VercelAIProvider] Repairing tool call", {
             toolCall,
-            parameterSchema,
+            inputSchema,
           });
           if (toolCall.toolName === "computer_action") {
             const toolCallResult = parseComputerToolArgs(toolCall.args);
@@ -183,13 +188,13 @@ export function createVercelAIProvider({
 
           const result = await generateObject({
             model: model,
-            schema: parameterSchema(toolCall),
+            schema: inputSchema({ toolName: toolCall.toolName }),
             prompt: [
               `The model tried to call the tool "${toolCall.toolName}" with the following arguments:`,
-              JSON.stringify(toolCall.args),
+              toolCall.input,
               "Please review the generated object and fix the arguments based on the required schema.",
             ].join("\n"),
-            experimental_repairText: ({ text }) => {
+            experimental_repairText: ({ text }: { text: string }) => {
               logger?.warn("[VercelAIProvider] Error generating object", {
                 text,
               });
@@ -217,7 +222,6 @@ export function createVercelAIProvider({
             args: JSON.stringify(result.object),
           };
         },
-        maxSteps: 1,
         maxRetries: 3,
         ...vercelOptions,
       });
@@ -227,7 +231,7 @@ export function createVercelAIProvider({
         toolCalls: result.toolCalls.map((tc) => ({
           toolCallId: tc.toolCallId,
           toolName: tc.toolName,
-          args: tc.args,
+          args: tc.input,
         })),
         usage: result.usage,
       };
@@ -238,27 +242,33 @@ export function createVercelAIProvider({
       systemPrompt?: string;
       messages?: AgentMessage[];
     }): Promise<GenerateObjectResult<T>> {
-      const result = await generateObject({
+      const baseOptions = {
         model,
         schema: options.schema,
         ...(options.systemPrompt ? { system: options.systemPrompt } : {}),
         messages: toCoreMessages(options.messages ?? []),
         maxRetries: 3,
+      };
+
+      const repairTextFn = ({ text, error }: { text: string; error: JSONParseError | TypeValidationError }) => {
+        logger?.warn(
+          "[VercelAIProvider] Failed to generate appropriate object",
+          {
+            text,
+            error,
+            failedText: JSONParseError.isInstance(error)
+              ? error.text
+              : undefined,
+          },
+        );
+        return Promise.resolve(text);
+      };
+
+      const result = await generateObject({
+        ...baseOptions,
         ...vercelOptions,
-        experimental_repairText: ({ text, error }) => {
-          logger?.warn(
-            "[VercelAIProvider] Failed to generate appropriate object",
-            {
-              text,
-              error,
-              failedText: JSONParseError.isInstance(error)
-                ? error.text
-                : undefined,
-            },
-          );
-          return Promise.resolve(text);
-        },
-      });
+        experimental_repairText: repairTextFn,
+      } as Parameters<typeof generateObject>[0]);
       return {
         object: result.object as z.infer<T>,
         usage: result.usage,
