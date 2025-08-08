@@ -34,11 +34,13 @@ function toCoreMessages(messages: AgentMessage[]): ModelMessage[] {
     return {
       role: "assistant",
       content: message.content,
-      toolInvocations: message.toolCalls?.map((tc: { toolCallId: string; toolName: string; args: unknown }) => ({
-        toolCallId: tc.toolCallId,
-        toolName: tc.toolName,
-        args: tc.args,
-      })),
+      toolInvocations: message.toolCalls?.map(
+        (tc: { toolCallId: string; toolName: string; args: unknown }) => ({
+          toolCallId: tc.toolCallId,
+          toolName: tc.toolName,
+          args: tc.args,
+        }),
+      ),
     };
   });
 }
