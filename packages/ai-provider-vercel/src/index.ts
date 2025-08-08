@@ -15,7 +15,7 @@ import {
   JSONParseError,
   type LanguageModel,
   NoSuchToolError,
-  TypeValidationError,
+  type TypeValidationError,
   type Tool as VercelTool,
   generateObject,
   generateText,
@@ -34,7 +34,7 @@ function toCoreMessages(messages: AgentMessage[]): ModelMessage[] {
     return {
       role: "assistant",
       content: message.content,
-      toolInvocations: message.toolCalls?.map((tc) => ({
+      toolInvocations: message.toolCalls?.map((tc: { toolCallId: string; toolName: string; args: unknown }) => ({
         toolCallId: tc.toolCallId,
         toolName: tc.toolName,
         args: tc.args,
@@ -52,7 +52,6 @@ function toVercelTools<T extends z.ZodSchema>(
   }
   const vercelTools: Record<string, VercelTool> = {};
   for (const [name, tool] of Object.entries(tools)) {
-    // @ts-expect-error - exactOptionalPropertyTypes causing issues
     vercelTools[name] = vercelTool({
       description: tool.description,
       inputSchema: tool.schema,
@@ -92,7 +91,7 @@ export function createVercelAIProvider({
 >): AIProvider {
   return {
     modelName() {
-      return Promise.resolve(typeof model === 'string' ? model : model.modelId);
+      return Promise.resolve(typeof model === "string" ? model : model.modelId);
     },
     async generateText(options: {
       systemPrompt?: string;
@@ -127,7 +126,7 @@ export function createVercelAIProvider({
             inputSchema,
           });
           if (toolCall.toolName === "computer_action") {
-            const toolCallResult = parseComputerToolArgs(toolCall.args);
+            const toolCallResult = parseComputerToolArgs(toolCall.input);
             logger?.info("[VercelAIProvider] Computer action tool call", {
               toolCallResult,
             });
@@ -250,7 +249,10 @@ export function createVercelAIProvider({
         maxRetries: 3,
       };
 
-      const repairTextFn = ({ text, error }: { text: string; error: JSONParseError | TypeValidationError }) => {
+      const repairTextFn = ({
+        text,
+        error,
+      }: { text: string; error: JSONParseError | TypeValidationError }) => {
         logger?.warn(
           "[VercelAIProvider] Failed to generate appropriate object",
           {

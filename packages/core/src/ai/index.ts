@@ -131,9 +131,9 @@ export interface GenerateTextResult {
   reasoning?: string;
   toolCalls: ToolCall[];
   usage?: {
-    promptTokens: number;
-    completionTokens: number;
-    totalTokens: number;
+    inputTokens: number | undefined;
+    outputTokens: number | undefined;
+    totalTokens: number | undefined;
   };
 }
 
@@ -143,9 +143,9 @@ export interface GenerateTextResult {
 export interface GenerateObjectResult<T extends z.ZodSchema> {
   object: z.infer<T>;
   usage?: {
-    promptTokens: number;
-    completionTokens: number;
-    totalTokens: number;
+    inputTokens: number | undefined;
+    outputTokens: number | undefined;
+    totalTokens: number | undefined;
   };
 }
 

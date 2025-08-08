@@ -48,7 +48,10 @@ function limitHistory(
     }
 
     if (message.role === "user") {
-      const contentItems = (message.content ?? []) as (TextContent | ImageContent)[];
+      const contentItems = (message.content ?? []) as (
+        | TextContent
+        | ImageContent
+      )[];
       const messageImageCount = contentItems.reduce((count, item) => {
         return count + (item.type === "image" ? 1 : 0);
       }, 0);
