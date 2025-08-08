@@ -16,9 +16,9 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^1.2.12",
-    "@ai-sdk/google": "^1.2.22",
-    "@ai-sdk/openai": "^1.3.23",
+    "@ai-sdk/anthropic": "^2.0.1",
+    "@ai-sdk/google": "^2.0.3",
+    "@ai-sdk/openai": "^2.0.5",
     "@trymeka/ai-provider-vercel": "workspace:*",
     "@trymeka/computer-provider-anchor-browser": "workspace:*",
     "@trymeka/computer-provider-e2b": "workspace:*",
