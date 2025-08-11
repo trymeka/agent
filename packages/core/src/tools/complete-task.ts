@@ -1,6 +1,12 @@
 import { z } from "zod";
 import type { Tool } from ".";
-import type { AIProvider, UserMessage } from "../ai";
+import type {
+  AIProvider,
+  AgentMessage,
+  ImageContent,
+  TextContent,
+  UserMessage,
+} from "../ai";
 import { createAgentLogUpdate } from "../utils/agent-log";
 import type { Logger } from "../utils/logger";
 import { processMessages } from "../utils/process-messages";
@@ -22,6 +28,75 @@ const completeTaskSchema = z.object({
       "Description of the final state of the application after completing the task",
     ),
 });
+
+/**
+ * Limits the message history to keep only the most recent N images/documents
+ * to avoid API limits while preserving important context.
+ */
+function limitHistory(
+  messages: AgentMessage[],
+  maxImages: number,
+): AgentMessage[] {
+  let imageCount = 0;
+  const result: AgentMessage[] = [];
+
+  // Process messages in reverse order to keep the most recent ones
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i];
+    if (!message) {
+      continue;
+    }
+
+    if (message.role === "user") {
+      const contentItems = (message.content ?? []) as (
+        | TextContent
+        | ImageContent
+      )[];
+      const messageImageCount = contentItems.reduce((count, item) => {
+        return count + (item.type === "image" ? 1 : 0);
+      }, 0);
+
+      // If adding this message would exceed the limit, filter its content
+      if (imageCount + messageImageCount > maxImages) {
+        const remainingSlots = Math.max(0, maxImages - imageCount);
+        const filteredContent: (TextContent | ImageContent)[] = [];
+        let slotsUsed = 0;
+
+        // Keep text content and as many images as possible
+        for (const item of contentItems) {
+          if (item.type === "text") {
+            filteredContent.push(item);
+          } else if (item.type === "image" && slotsUsed < remainingSlots) {
+            filteredContent.push(item);
+            slotsUsed++;
+          }
+        }
+
+        if (filteredContent.length > 0) {
+          result.unshift({
+            role: "user",
+            content: filteredContent,
+          });
+        }
+        imageCount += slotsUsed;
+
+        // Stop processing if we've reached the limit
+        if (imageCount >= maxImages) {
+          break;
+        }
+      } else {
+        // Add the entire message
+        result.unshift(message);
+        imageCount += messageImageCount;
+      }
+    } else {
+      // Keep non-user messages as-is
+      result.unshift(message);
+    }
+  }
+
+  return result;
+}
 
 /**
  * Creates a tool that allows the agent to declare a task as complete.
@@ -168,7 +243,10 @@ Respond with either an APPROVED or REFLECTION object based on your evaluation. F
           ],
         } satisfies UserMessage,
       ];
-      const processedFullHistory = await processMessages(fullHistory);
+
+      // Limit to most recent 95 images/documents to avoid API limits
+      const limitedHistory = limitHistory(fullHistory, 95);
+      const processedFullHistory = await processMessages(limitedHistory);
       const result = await ground.generateObject({
         messages: processedFullHistory,
         schema: outputSchema,

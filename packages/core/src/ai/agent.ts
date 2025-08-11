@@ -534,8 +534,8 @@ export function createAgent<T, R>(options: {
             },
             usage: {
               model: currentModel.model,
-              inputTokensStep: response.usage?.promptTokens,
-              outputTokensStep: response.usage?.completionTokens,
+              inputTokensStep: response.usage?.inputTokens,
+              outputTokensStep: response.usage?.outputTokens,
               totalTokensStep: response.usage?.totalTokens,
             },
           };
