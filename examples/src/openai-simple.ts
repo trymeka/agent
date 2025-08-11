@@ -1,17 +1,13 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { createVercelAIProvider } from "@trymeka/ai-provider-vercel";
+import { createAnchorBrowserComputerProvider } from "@trymeka/computer-provider-anchor-browser";
 import { createScrapybaraComputerProvider } from "@trymeka/computer-provider-scrapybara";
 import { createAgent } from "@trymeka/core/ai/agent";
 import { z } from "zod";
 
-/**
- * This example shows how to use the Anthropic model to run a task.
- */
-
-if (!process.env.SCRAPYBARA_API_KEY) {
-  throw new Error("SCRAPYBARA_API_KEY is not set");
+if (!process.env.ANCHOR_BROWSER_API_KEY) {
+  throw new Error("ANCHOR_BROWSER_API_KEY is not set");
 }
-
 if (!process.env.OPENAI_API_KEY) {
   throw new Error("OPENAI_API_KEY is not set");
 }
@@ -19,12 +15,13 @@ if (!process.env.OPENAI_API_KEY) {
 const aiProvider = createVercelAIProvider({
   model: createOpenAI({
     apiKey: process.env.OPENAI_API_KEY,
-  })("o3"),
+  })("gpt-5"),
 });
-const computerProvider = createScrapybaraComputerProvider({
-  apiKey: process.env.SCRAPYBARA_API_KEY,
+const computerProvider = createAnchorBrowserComputerProvider({
+  apiKey: process.env.ANCHOR_BROWSER_API_KEY as string,
   initialUrl: "https://news.ycombinator.com",
 });
+
 const agent = createAgent({
   aiProvider,
   computerProvider,
@@ -32,8 +29,7 @@ const agent = createAgent({
 });
 
 const session = await agent.initializeSession();
-console.log("session live url", session.get()?.liveUrl);
-const task = await session.runTask({
+const result = await session.runTask({
   instructions: "Summarize the top 3 articles",
   outputSchema: z.object({
     articles: z.array(
@@ -46,7 +42,25 @@ const task = await session.runTask({
   }),
 });
 
-console.log("Task", JSON.stringify(task.result, null, 2));
+console.log("results", JSON.stringify(result, null, 2));
 
 await session.end();
+const sessionDetails = session.get();
+
+console.log(
+  "session details",
+  sessionDetails.tasks.map((task) => {
+    return {
+      logs: JSON.stringify(
+        task.logs.map((log) => {
+          return {
+            ...log,
+            screenshot: "image-data",
+          };
+        }),
+      ),
+      result: task.result,
+    };
+  }),
+);
 process.exit(0);
