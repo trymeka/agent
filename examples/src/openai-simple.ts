@@ -1,7 +1,6 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { createVercelAIProvider } from "@trymeka/ai-provider-vercel";
 import { createAnchorBrowserComputerProvider } from "@trymeka/computer-provider-anchor-browser";
-import { createScrapybaraComputerProvider } from "@trymeka/computer-provider-scrapybara";
 import { createAgent } from "@trymeka/core/ai/agent";
 import { z } from "zod";
 
