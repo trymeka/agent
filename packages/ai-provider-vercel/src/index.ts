@@ -176,7 +176,7 @@ export function createVercelAIProvider({
 
             return {
               ...toolCall,
-              args: JSON.stringify({
+              input: JSON.stringify({
                 action: result.object,
                 reasoning: toolCallResult.args.reasoning,
                 previousStepEvaluation:
@@ -220,7 +220,7 @@ export function createVercelAIProvider({
 
           return {
             ...toolCall,
-            args: JSON.stringify(result.object),
+            input: JSON.stringify(result.object),
           };
         },
         maxRetries: 3,
