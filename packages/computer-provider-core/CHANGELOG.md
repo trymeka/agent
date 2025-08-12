@@ -1,5 +1,18 @@
 # @trymeka/computer-provider-core
 
+## 0.1.0
+
+### Minor Changes
+
+- 0cf3957: Bump major version on vercel ai sdk
+
+### Patch Changes
+
+- Updated dependencies [b0467db]
+- Updated dependencies [76ef044]
+- Updated dependencies [0cf3957]
+  - @trymeka/core@0.1.0
+
 ## 0.0.15
 
 ### Patch Changes
