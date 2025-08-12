@@ -1,5 +1,16 @@
 # @trymeka/core
 
+## 0.1.0
+
+### Minor Changes
+
+- 0cf3957: Bump major version on vercel ai sdk
+
+### Patch Changes
+
+- b0467db: feat: Add ability to have custom system prompt
+- 76ef044: feat(core): Update to add ability to limit context window to agent
+
 ## 0.0.27
 
 ### Patch Changes
