@@ -1,7 +1,11 @@
 import { z } from "zod";
 import type { AIProvider, AgentLog, AgentMessage, Session, Task } from ".";
 import { type Tool, createCompleteTaskTool, createWaitTool } from "../tools";
-import { type ComputerProvider, createComputerTool } from "../tools/computer";
+import {
+  type ComputerProvider,
+  type ScreenSize,
+  createComputerTool,
+} from "../tools/computer";
 import { ComputerProviderError, ToolCallError } from "../tools/errors";
 import { SessionMemoryStore, createMemoryTool } from "../tools/memory";
 import { type Logger, createNoOpLogger } from "../utils/logger";
@@ -57,9 +61,17 @@ export function createAgent<T, R>(options: {
         evaluator?: AIProvider;
       };
   computerProvider: ComputerProvider<T, R>;
+  createSystemPrompt?: (options: {
+    screenSize: ScreenSize;
+  }) => string;
   logger?: Logger;
 }) {
-  const { aiProvider, computerProvider, logger: loggerOverride } = options;
+  const {
+    aiProvider,
+    computerProvider,
+    logger: loggerOverride,
+    createSystemPrompt,
+  } = options;
   const {
     ground,
     evaluator: baseEvaluator,
@@ -438,9 +450,13 @@ export function createAgent<T, R>(options: {
           // Generate model response
           const currentModel = getCurrentModel(step);
           const requestPayload = {
-            systemPrompt: SYSTEM_PROMPT({
-              screenSize,
-            }),
+            systemPrompt:
+              createSystemPrompt?.({
+                screenSize,
+              }) ??
+              SYSTEM_PROMPT({
+                screenSize,
+              }),
             messages: processedMessages,
             tools: allTools,
           };

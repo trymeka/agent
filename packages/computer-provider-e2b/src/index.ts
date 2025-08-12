@@ -8,6 +8,7 @@ import {
   type ComputerProvider,
   ComputerProviderError,
 } from "@trymeka/core";
+import type { ScreenSize } from "@trymeka/core/tools/computer";
 import { type Logger, createNoOpLogger } from "@trymeka/core/utils/logger";
 import { retryWithExponentialBackoff } from "@trymeka/core/utils/retry";
 
@@ -70,7 +71,7 @@ export function createE2BComputerProvider(options: {
     sessionId: string;
     step: number;
   }) => Promise<{ url: string }>;
-  screenSize?: { width: number; height: number };
+  screenSize?: ScreenSize;
   initialUrl?: string;
   logger?: Logger;
 }): ComputerProvider<

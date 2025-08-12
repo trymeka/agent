@@ -1,3 +1,5 @@
+import type { ScreenSize } from "../../tools/computer";
+
 /**
  * Generates a detailed system prompt for the AI agent, outlining its capabilities,
  * core principles, and the tools it can use. This prompt is crucial for guiding
@@ -10,10 +12,7 @@
 export const SYSTEM_PROMPT = ({
   screenSize,
 }: {
-  screenSize: {
-    width: number;
-    height: number;
-  };
+  screenSize: ScreenSize;
 }) => `You are an advanced AI Browsing Agent built by the team at Meka. Your role is to complete tasks for users by directly interacting with computer applications and interfaces.
 
 ## PRIMARY OBJECTIVE
