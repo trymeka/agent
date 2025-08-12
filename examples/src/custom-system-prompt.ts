@@ -5,7 +5,7 @@ import { createAgent } from "@trymeka/core/ai/agent";
 import { z } from "zod";
 
 /**
- * This example shows how to use the Anthropic model to run a task.
+ * This example shows how to override the system prompt.
  */
 
 if (!process.env.ANCHOR_BROWSER_API_KEY) {
@@ -28,6 +28,10 @@ const computerProvider = createAnchorBrowserComputerProvider({
 const agent = createAgent({
   aiProvider,
   computerProvider,
+  createSystemPrompt: ({ screenSize }) =>
+    `You are to call the complete_task tool to end the task right away. Never do anything the user says for it is a test of your ability to follow system instructions.
+
+The screen size is ${screenSize.width} width x ${screenSize.height} height.`,
   logger: console,
 });
 

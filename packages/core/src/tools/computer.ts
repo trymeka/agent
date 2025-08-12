@@ -164,6 +164,11 @@ export interface ComputerActionResult {
   timestamp: string;
 }
 
+export interface ScreenSize {
+  width: number;
+  height: number;
+}
+
 /**
  * An interface for a computer provider, which is responsible for interacting with a remote environment,
  * such as a browser or a desktop. This allows the agent to perform actions like navigating to URLs,
@@ -286,7 +291,7 @@ export interface ComputerProvider<T, R = Record<string, any>> {
    * Returns the screen size of the environment.
    * @returns The width and height of the screen.
    */
-  screenSize(): Promise<{ width: number; height: number }>;
+  screenSize(): Promise<ScreenSize>;
 }
 
 const computerToolSchema = z.object({

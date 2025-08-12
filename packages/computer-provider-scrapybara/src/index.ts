@@ -6,6 +6,7 @@ import {
   type ComputerProvider,
   ComputerProviderError,
 } from "@trymeka/core";
+import type { ScreenSize } from "@trymeka/core/tools/computer";
 import { type Logger, createNoOpLogger } from "@trymeka/core/utils/logger";
 import { retryWithExponentialBackoff } from "@trymeka/core/utils/retry";
 import { type Browser, type Page, chromium } from "playwright-core";
@@ -89,7 +90,7 @@ export function createScrapybaraComputerProvider(options: {
     sessionId: string;
     step: number;
   }) => Promise<{ url: string }>;
-  screenSize?: { width: number; height: number };
+  screenSize?: ScreenSize;
   initialUrl?: string;
   logger?: Logger;
 }): ComputerProvider<
