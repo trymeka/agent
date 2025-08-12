@@ -99,16 +99,12 @@ Respond with either an APPROVED or REFLECTION object based on your evaluation. F
             ],
           } satisfies UserMessage,
         ];
-
-        const processedEvaluationMessages = await processMessages(
-          evaluationMessages,
-          logger,
-        );
+        const modelName = await evaluator.modelName();
         // Limit conversation history based on provider model
-        const modelName = await ground.modelName();
-        const limitedHistory = limitMessages(
-          processedEvaluationMessages,
-          modelName,
+        const limitedHistory = limitMessages(evaluationMessages, modelName);
+        const processedEvaluationMessages = await processMessages(
+          limitedHistory,
+          logger,
         );
         logger?.info("[CompleteTaskTool] Evaluating task completion");
         const evaluationResult = await evaluator.generateObject({
@@ -129,7 +125,7 @@ Respond with either an APPROVED or REFLECTION object based on your evaluation. F
               })
               .nullable(),
           }),
-          messages: limitedHistory,
+          messages: processedEvaluationMessages,
         });
         logger?.info("[CompleteTaskTool] Evaluation result", {
           evaluationResult,
