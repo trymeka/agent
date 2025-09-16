@@ -1,5 +1,13 @@
 # @trymeka/ai-provider-vercel
 
+## 0.1.1
+
+### Patch Changes
+
+- 9acfbf5: Fix computer use "screenshot" tool call problem and add smarter waiting between steps
+- Updated dependencies [9acfbf5]
+  - @trymeka/core@0.1.1
+
 ## 0.1.0
 
 ### Minor Changes
