@@ -1,5 +1,5 @@
-import z from "zod";
 import type { Page } from "playwright-core";
+import z from "zod";
 import type { Tool } from ".";
 import { createAgentLogUpdate } from "../utils/agent-log";
 
