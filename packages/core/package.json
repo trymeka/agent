@@ -6,9 +6,7 @@
     "access": "public"
   },
   "description": "TODO: Add description",
-  "keywords": [
-    "trymeka"
-  ],
+  "keywords": ["trymeka"],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/trymeka/agent.git",
@@ -16,11 +14,7 @@
   },
   "license": "MIT",
   "homepage": "https://github.com/trymeka/agent/tree/main/packages/agent#readme",
-  "files": [
-    "dist",
-    "!dist/**/*.map",
-    "README.md"
-  ],
+  "files": ["dist", "!dist/**/*.map", "README.md"],
   "exports": {
     ".": {
       "typescript": "./src/index.ts",
@@ -54,8 +48,12 @@
   "dependencies": {
     "zod": "^3.24.4"
   },
+  "peerDependencies": {
+    "playwright-core": "^1.54.1"
+  },
   "devDependencies": {
     "@trymeka/typescript": "workspace:*",
+    "playwright-core": "^1.54.1",
     "tsup": "^8.5.0",
     "typescript": "^5.8.3"
   }
