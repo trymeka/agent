@@ -192,6 +192,9 @@ importers:
       '@trymeka/typescript':
         specifier: workspace:*
         version: link:../../tooling/typescript
+      playwright-core:
+        specifier: ^1.54.1
+        version: 1.54.1
       tsup:
         specifier: ^8.5.0
         version: 8.5.0(postcss@8.5.6)(tsx@4.20.3)(typescript@5.8.3)

@@ -1,4 +1,5 @@
 import z from "zod";
+import type { Page } from "playwright-core";
 import type { Tool } from ".";
 import { createAgentLogUpdate } from "../utils/agent-log";
 
@@ -67,7 +68,26 @@ export const parseComputerToolArgs = (args: string | object) => {
   if (actionString.includes("wait")) {
     return { schema: waitActionSchema, args: parsedArgs };
   }
-  return null;
+
+  // Handle screenshot action specifically - screenshots should be automatic, not manual
+  if (actionString.includes("screenshot")) {
+    console.warn(
+      "[parseComputerToolArgs] LLM requested screenshot action - screenshots should be automatic",
+    );
+    return {
+      schema: waitActionSchema,
+      args: { ...parsedArgs, action: { type: "wait", duration: 0 } },
+    };
+  }
+
+  // Fallback for any other unrecognized actions - don't return null
+  console.warn(
+    `[parseComputerToolArgs] Unrecognized computer action: ${actionString}`,
+  );
+  return {
+    schema: waitActionSchema,
+    args: { ...parsedArgs, action: { type: "wait", duration: 0 } },
+  };
 };
 
 const clickActionSchema = z
@@ -344,6 +364,34 @@ export function createComputerTool<T, R>({
     },
     execute: async (args, context) => {
       const result = await computerProvider.performAction(args.action, context);
+
+      // Smart delay with network idle support
+      if (args.action.type === "click" || args.action.type === "double_click") {
+        try {
+          const instance = await computerProvider.getInstance(
+            context.sessionId,
+          );
+          const page = (instance as { page?: Page })?.page;
+
+          if (page?.waitForLoadState) {
+            await page.waitForLoadState("networkidle", { timeout: 1500 });
+          } else {
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+          }
+        } catch {
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        }
+      } else {
+        // Other action types get fixed delays
+        const delay =
+          args.action.type === "type"
+            ? 300
+            : args.action.type === "scroll"
+              ? 800
+              : 500;
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+
       const screenshot = await computerProvider.takeScreenshot(
         context.sessionId,
       );
