@@ -420,8 +420,8 @@ export function createAgent<T, R>(options: {
                 {
                   type: "text",
                   text: `${task.instructions}
-      
-      Here is the current state of the screen:`,
+
+      Starting screenshot:`,
                 },
                 {
                   type: "image",
