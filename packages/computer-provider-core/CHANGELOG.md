@@ -1,5 +1,13 @@
 # @trymeka/computer-provider-core
 
+## 0.1.2
+
+### Patch Changes
+
+- 8565249: Give the agent clarity on screenshot numbers
+- Updated dependencies [8565249]
+  - @trymeka/core@0.1.2
+
 ## 0.1.1
 
 ### Patch Changes
