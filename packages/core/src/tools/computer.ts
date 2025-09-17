@@ -365,7 +365,7 @@ export function createComputerTool<T, R>({
     execute: async (args, context) => {
       const result = await computerProvider.performAction(args.action, context);
 
-      // Smart delay with network idle support
+      // Smart delay with network idle support for navigation actions only
       if (args.action.type === "click" || args.action.type === "double_click") {
         try {
           const instance = await computerProvider.getInstance(
@@ -374,23 +374,14 @@ export function createComputerTool<T, R>({
           const page = (instance as { page?: Page })?.page;
 
           if (page?.waitForLoadState) {
-            await page.waitForLoadState("networkidle", { timeout: 1500 });
-          } else {
-            await new Promise((resolve) => setTimeout(resolve, 1500));
+            await page.waitForLoadState("networkidle", { timeout: 1000 });
           }
+          // No fallback delay - if network idle doesn't work, proceed immediately
         } catch {
-          await new Promise((resolve) => setTimeout(resolve, 1500));
+          // No fallback delay on error - proceed immediately
         }
-      } else {
-        // Other action types get fixed delays
-        const delay =
-          args.action.type === "type"
-            ? 300
-            : args.action.type === "scroll"
-              ? 800
-              : 500;
-        await new Promise((resolve) => setTimeout(resolve, delay));
       }
+      // No delays for other action types - proceed immediately
 
       const screenshot = await computerProvider.takeScreenshot(
         context.sessionId,
@@ -415,7 +406,7 @@ export function createComputerTool<T, R>({
           },
           {
             type: "text" as const,
-            text: `Computer action on ${result.timestamp}, result: ${result.actionPerformed}. Reasoning: ${result.reasoning} Screenshot as attached.`,
+            text: `Computer action completed: ${result.actionPerformed}. Step ${context.step} screenshot attached.`,
           },
           {
             type: "image" as const,

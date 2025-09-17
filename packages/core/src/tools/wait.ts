@@ -40,7 +40,7 @@ export function createWaitTool<T, R>({
         content: [
           {
             type: "text" as const,
-            text: `Waited for ${args.duration} seconds. Reason: ${args.reasoning}. Screenshot as attached.`,
+            text: `Waited for ${args.duration} seconds. Reason: ${args.reasoning}. Screenshot at Step ${context.step} as attached.`,
           },
           {
             type: "image" as const,
