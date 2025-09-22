@@ -543,8 +543,8 @@ export function createAgent<T, R>(options: {
               done: [
                 {
                   type: "text",
-                  text: response.text ?? "Processing...",
-                  reasoning: response.reasoning ?? "No reasoning provided",
+                  text: response.text ?? "",
+                  reasoning: response.reasoning ?? "",
                 },
               ],
             },
