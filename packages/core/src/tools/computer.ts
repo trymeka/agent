@@ -365,23 +365,8 @@ export function createComputerTool<T, R>({
     execute: async (args, context) => {
       const result = await computerProvider.performAction(args.action, context);
 
-      // Smart delay with network idle support for navigation actions only
-      if (args.action.type === "click" || args.action.type === "double_click") {
-        try {
-          const instance = await computerProvider.getInstance(
-            context.sessionId,
-          );
-          const page = (instance as { page?: Page })?.page;
-
-          if (page?.waitForLoadState) {
-            await page.waitForLoadState("networkidle", { timeout: 1000 });
-          }
-          // No fallback delay - if network idle doesn't work, proceed immediately
-        } catch {
-          // No fallback delay on error - proceed immediately
-        }
-      }
-      // No delays for other action types - proceed immediately
+      // Delay for 2 seconds to allow the action to complete - need smarter wait in the future
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       const screenshot = await computerProvider.takeScreenshot(
         context.sessionId,
