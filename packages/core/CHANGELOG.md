@@ -1,5 +1,11 @@
 # @trymeka/core
 
+## 0.1.3
+
+### Patch Changes
+
+- 4ffcc79: Wait between computer actions and update fallback text on reasoning
+
 ## 0.1.2
 
 ### Patch Changes

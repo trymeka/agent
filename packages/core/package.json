@@ -1,12 +1,14 @@
 {
   "name": "@trymeka/core",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "type": "module",
   "publishConfig": {
     "access": "public"
   },
   "description": "TODO: Add description",
-  "keywords": ["trymeka"],
+  "keywords": [
+    "trymeka"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/trymeka/agent.git",
@@ -14,7 +16,11 @@
   },
   "license": "MIT",
   "homepage": "https://github.com/trymeka/agent/tree/main/packages/agent#readme",
-  "files": ["dist", "!dist/**/*.map", "README.md"],
+  "files": [
+    "dist",
+    "!dist/**/*.map",
+    "README.md"
+  ],
   "exports": {
     ".": {
       "typescript": "./src/index.ts",
