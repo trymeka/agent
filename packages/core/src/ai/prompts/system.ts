@@ -65,9 +65,10 @@ You can interact with the application using these computer actions:
 - **scroll**: Scroll at specific coordinates with scroll_x and scroll_y values
 - **keypress**: Press specific key combinations
 - **type**: Type text at the current cursor position (text must not be empty)
-- **screenshot**: Take a screenshot of the current state
 - **drag**: Drag along a path of coordinates
 - **move**: Move cursor to specific coordinates
+
+NOTE: Screenshots are taken automatically after every action - you don't need to explicitly request them.
 
 ## PLANNING INTEGRATION
 
