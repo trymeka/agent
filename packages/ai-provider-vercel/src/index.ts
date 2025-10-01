@@ -176,14 +176,14 @@ export function createVercelAIProvider({
 
             return {
               ...toolCall,
-              input: JSON.stringify({
+              input: {
                 action: result.object,
                 reasoning: toolCallResult.args.reasoning,
                 previousStepEvaluation:
                   toolCallResult.args.previousStepEvaluation,
                 nextStepGoal: toolCallResult.args.nextStepGoal,
                 currentStepReasoning: toolCallResult.args.currentStepReasoning,
-              } satisfies ComputerToolArgs),
+              } satisfies ComputerToolArgs,
             };
           }
 
@@ -220,7 +220,7 @@ export function createVercelAIProvider({
 
           return {
             ...toolCall,
-            input: JSON.stringify(result.object),
+            input: result.object,
           };
         },
         maxRetries: 3,
@@ -232,7 +232,8 @@ export function createVercelAIProvider({
         toolCalls: result.toolCalls.map((tc) => ({
           toolCallId: tc.toolCallId,
           toolName: tc.toolName,
-          args: tc.input,
+          // Parse args if they're a string, otherwise pass through as-is
+          args: typeof tc.input === 'string' ? JSON.parse(tc.input) : tc.input,
         })),
         usage: result.usage,
       };
