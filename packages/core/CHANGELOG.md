@@ -1,5 +1,11 @@
 # @trymeka/core
 
+## 0.1.5
+
+### Patch Changes
+
+- 16fce07: Actually fix the input repair problem
+
 ## 0.1.4
 
 ### Patch Changes

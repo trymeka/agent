@@ -1,5 +1,14 @@
 # @trymeka/computer-provider-scrapybara
 
+## 0.1.5
+
+### Patch Changes
+
+- 16fce07: Actually fix the input repair problem
+- Updated dependencies [16fce07]
+  - @trymeka/computer-provider-core@0.1.5
+  - @trymeka/core@0.1.5
+
 ## 0.1.4
 
 ### Patch Changes
