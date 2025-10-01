@@ -176,14 +176,14 @@ export function createVercelAIProvider({
 
             return {
               ...toolCall,
-              input: {
+              input: JSON.stringify({
                 action: result.object,
                 reasoning: toolCallResult.args.reasoning,
                 previousStepEvaluation:
                   toolCallResult.args.previousStepEvaluation,
                 nextStepGoal: toolCallResult.args.nextStepGoal,
                 currentStepReasoning: toolCallResult.args.currentStepReasoning,
-              } satisfies ComputerToolArgs,
+              } satisfies ComputerToolArgs),
             };
           }
 
@@ -220,7 +220,7 @@ export function createVercelAIProvider({
 
           return {
             ...toolCall,
-            input: result.object,
+            input: JSON.stringify(result.object),
           };
         },
         maxRetries: 3,
