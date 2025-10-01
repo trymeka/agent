@@ -1,5 +1,11 @@
 # @trymeka/core
 
+## 0.1.6
+
+### Patch Changes
+
+- d0cdf21: Remove explicit screenshot tool - not implemented
+
 ## 0.1.5
 
 ### Patch Changes
