@@ -233,7 +233,7 @@ export function createVercelAIProvider({
           toolCallId: tc.toolCallId,
           toolName: tc.toolName,
           // Parse args if they're a string, otherwise pass through as-is
-          args: typeof tc.input === 'string' ? JSON.parse(tc.input) : tc.input,
+          args: typeof tc.input === "string" ? JSON.parse(tc.input) : tc.input,
         })),
         usage: result.usage,
       };
