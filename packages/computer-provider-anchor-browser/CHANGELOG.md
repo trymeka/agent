@@ -1,5 +1,14 @@
 # @trymeka/computer-provider-anchor-browser
 
+## 0.1.4
+
+### Patch Changes
+
+- 1c32f7f: Fix repair tool call
+- Updated dependencies [1c32f7f]
+  - @trymeka/computer-provider-core@0.1.4
+  - @trymeka/core@0.1.4
+
 ## 0.1.3
 
 ### Patch Changes
