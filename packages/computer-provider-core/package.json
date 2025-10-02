@@ -6,9 +6,7 @@
     "access": "public"
   },
   "description": "TODO: Add description",
-  "keywords": [
-    "trymeka"
-  ],
+  "keywords": ["trymeka"],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/trymeka/agent.git",
@@ -16,11 +14,7 @@
   },
   "license": "MIT",
   "homepage": "https://github.com/trymeka/agent/tree/main/packages/computer-provider-core#readme",
-  "files": [
-    "dist",
-    "!dist/**/*.map",
-    "README.md"
-  ],
+  "files": ["dist", "!dist/**/*.map", "README.md"],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

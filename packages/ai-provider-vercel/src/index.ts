@@ -136,6 +136,35 @@ export function createVercelAIProvider({
               return null;
             }
 
+            // Detect and fix double-nested structure from model (common with Claude Sonnet 4.5)
+            if (toolCallResult?.args?.action?.action) {
+              logger?.info(
+                "[VercelAIProvider] Detected double-nested action structure, flattening",
+                {
+                  originalStructure: toolCallResult.args,
+                },
+              );
+
+              const flattenedArgs = {
+                action: toolCallResult.args.action.action,
+                reasoning: toolCallResult.args.action.reasoning,
+                previousStepEvaluation:
+                  toolCallResult.args.action.previousStepEvaluation,
+                currentStepReasoning:
+                  toolCallResult.args.action.currentStepReasoning,
+                nextStepGoal: toolCallResult.args.action.nextStepGoal,
+              } satisfies ComputerToolArgs;
+
+              logger?.info("[VercelAIProvider] Flattened action structure", {
+                flattenedArgs,
+              });
+
+              return {
+                ...toolCall,
+                input: JSON.stringify(flattenedArgs),
+              };
+            }
+
             const result = await generateObject({
               model: model,
               schema: toolCallResult.schema,
