@@ -1,5 +1,14 @@
 # @trymeka/computer-provider-anchor-browser
 
+## 0.1.7
+
+### Patch Changes
+
+- 9574eaf: Fix for Sonnet double nesting 'action' property
+- Updated dependencies [9574eaf]
+  - @trymeka/computer-provider-core@0.1.7
+  - @trymeka/core@0.1.7
+
 ## 0.1.6
 
 ### Patch Changes
