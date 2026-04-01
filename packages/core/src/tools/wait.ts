@@ -44,7 +44,7 @@ export function createWaitTool<T, R>({
           },
           {
             type: "image" as const,
-            image: screenshotUrl?.url ? new URL(screenshotUrl.url) : screenshot,
+            image: screenshotUrl && screenshotUrl.url ? new URL(screenshotUrl.url) : screenshot,
           },
         ],
       };
